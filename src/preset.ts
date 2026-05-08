@@ -45,7 +45,7 @@ export async function discoverPresets(): Promise<PresetSummary[]> {
 /**
  * Load a preset by ID.
  * - "custom" returns null (user configures everything manually)
- * - If presetId contains "/" or ends with ".json", treat as external file path
+ * - If presetId contains "/" or ends with ".json", treat as external path (file or directory containing preset.json)
  * - Otherwise look up in built-in presets/ directory
  *
  * Filters out legacy `viterex` submodule entries with a warning — viterex is

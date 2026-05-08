@@ -8,6 +8,22 @@ release. Nothing has been published to npm yet — everything lives under
 
 ## [Unreleased]
 
+### Changed (2026-05-08)
+
+- **Default `--pm` flipped from `yarn` → `pnpm`.** The interactive package-manager select also reorders `pnpm` to first position; existing `--pm yarn` invocations and existing configs pinning `"packageManager": "yarn"` continue to work — only the default for new installs changes.
+
+### Fixed (2026-05-08)
+
+- **`--preset <directory>` no longer crashes with `EISDIR`.** `loadPreset` (`src/preset.ts`) now accepts both a path to a `preset.json` file AND a path to a directory containing one; `dir` correctly anchors at the preset folder, so downstream relative paths (`filesDir`, `seedFile`, `installerConfig`, `deployerExtras`) resolve as intended. Four new tests in `src/__tests__/preset.test.ts` lock the file/directory/missing-preset.json/seed-anchor behaviours.
+- **`--config <directory>` no longer crashes with `EISDIR`.** Same pattern applied to `loadConfigFile` (extracted to `src/utils/load-config.ts` so it can be tested in isolation; importing from `src/index.ts` would have triggered `program.parse()`) and `resolveTargetDir`. Three new tests in `src/utils/__tests__/load-config.test.ts`.
+
+### Added (2026-05-08)
+
+- **Per-option `hint` text in interactive prompts.** Package-manager, preset, and layout selects now show one-line hints next to each option (`@clack/prompts`'s `hint` field). Preset hints come from each `preset.json#description`; built-in preset descriptions were shortened to fit (the prior long-form text wasn't displayed anywhere).
+- **`PresetSummary` type exported from `src/preset.ts`.** `discoverPresets()` returns `Promise<PresetSummary[]>` (was `Promise<string[]>`) so each entry can carry an optional description for hint UX. Single consumer (`src/prompts.ts`) updated atomically.
+- **Clearer `--help` strings for `--pm`, `--preset`, `--config`, `--layout`** (`src/index.ts`). Each flag's purpose is now legible standalone — readers don't need the README to disambiguate `--config` from `--preset`.
+- **README explainer paragraph** above the Options table distinguishing `--preset` ("starting point — pre-fills some answers") from `--config` ("pins every answer; for CI"). Flag-table description cells rewritten to match.
+
 ### Added (2026-05-01)
 
 - **Pipeline task: `Clear Redaxo cache`** (`src/tasks/clear-cache.ts`). Runs `php <console> cache:clear --no-interaction` between *Create remote git repository* (step 14) and *Open frontend and backend in browser* (step 16) so the just-opened browser doesn't show stale templates / modules / asset paths left behind by `setup:run`, addon install, `viterex:install-stubs`, or submodule activation. No skip predicate — `cache:clear` is idempotent and cheap; runs in both fresh and augment mode. Pipeline grew from 16 → 17 steps.

@@ -58,7 +58,7 @@ Published usage: `npx create-viterex [project-name] [--flags]`
 - `--skip-db` — skip database creation
 - `--skip-addons` — skip addon installation
 - `--skip-git` — don't init git repo
-- `--pm <yarn|npm|pnpm>` — package manager (default: yarn)
+- `--pm <yarn|npm|pnpm>` — package manager (default: pnpm)
 - `--config <path>` — load config from JSON file, skip all prompts
 
 ## Templates

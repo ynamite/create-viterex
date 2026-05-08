@@ -2,6 +2,12 @@ import path from "node:path";
 import fs from "fs-extra";
 import type { Layout, ViterexConfig } from "../types.js";
 
+/**
+ * Load a viterex config JSON, accepting either a file path or a directory
+ * containing `viterex.json`. Backfills defaults for fields added in newer
+ * installer versions (`templateReplacements`, `preset`, `layout`,
+ * `installMode`, `redaxoLang`, `redaxoTimezone`, `addons`).
+ */
 export async function loadConfigFile(
   configPath: string,
   defaultLayout: Layout,
