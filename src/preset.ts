@@ -49,8 +49,15 @@ export async function loadPreset(
   let dir: string;
 
   if (presetId.includes("/") || presetId.endsWith(".json")) {
-    configPath = path.resolve(presetId);
-    dir = path.dirname(configPath);
+    const resolved = path.resolve(presetId);
+    const stat = await fs.stat(resolved).catch(() => null);
+    if (stat?.isDirectory()) {
+      dir = resolved;
+      configPath = path.join(dir, "preset.json");
+    } else {
+      configPath = resolved;
+      dir = path.dirname(configPath);
+    }
   } else {
     dir = path.join(presetsDir, presetId);
     configPath = path.join(dir, "preset.json");
