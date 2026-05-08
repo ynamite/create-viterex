@@ -7,8 +7,9 @@ import { collectConfig } from "./prompts.js";
 import { runPipeline } from "./pipeline.js";
 import { loadState, clearState } from "./state.js";
 import { detectInstallation } from "./utils/detect.js";
+import { loadConfigFile } from "./utils/load-config.js";
 import { printBanner, printSuccess, printError } from "./utils/log.js";
-import type { Layout, ViterexConfig } from "./types.js";
+import type { ViterexConfig } from "./types.js";
 
 const pkgVersion = (() => {
   const here = path.dirname(fileURLToPath(import.meta.url));
@@ -131,7 +132,11 @@ function resolveTargetDir(projectName: string | undefined, configPath: string | 
   }
   if (configPath) {
     try {
-      const cfg = fs.readJSONSync(configPath) as { projectDir?: string };
+      const resolved = path.resolve(configPath);
+      let isDir = false;
+      try { isDir = fs.statSync(resolved).isDirectory(); } catch { /* missing path */ }
+      const file = isDir ? path.join(resolved, "viterex.json") : resolved;
+      const cfg = fs.readJSONSync(file) as { projectDir?: string };
       if (cfg.projectDir) return path.resolve(cfg.projectDir);
     } catch {
       // fall through to cwd
@@ -140,17 +145,3 @@ function resolveTargetDir(projectName: string | undefined, configPath: string | 
   return process.cwd();
 }
 
-async function loadConfigFile(configPath: string, defaultLayout: Layout): Promise<ViterexConfig> {
-  const config = (await fs.readJSON(configPath)) as Partial<ViterexConfig> & Record<string, unknown>;
-
-  // Backfill defaults for fields added in newer installer versions
-  if (!config.templateReplacements) config.templateReplacements = {};
-  if (!config.preset) config.preset = "custom";
-  if (!config.layout) config.layout = defaultLayout;
-  if (!config.installMode) config.installMode = "fresh";
-  if (!config.redaxoLang) config.redaxoLang = "de_de";
-  if (!config.redaxoTimezone) config.redaxoTimezone = "Europe/Berlin";
-  if (!config.addons) config.addons = [];
-
-  return config as ViterexConfig;
-}
