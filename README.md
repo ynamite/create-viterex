@@ -62,7 +62,7 @@ create-viterex [project-name] [options]
 | `--skip-db`          | Skip database creation (assume pre-populated empty DB at credentials) | `false`          |
 | `--skip-addons`      | Skip addon installation                                              | `false`          |
 | `--skip-git`         | Don't initialize a git repo                                          | `false`          |
-| `--pm <manager>`     | Package manager: `yarn`, `npm`, or `pnpm`                            | `yarn`           |
+| `--pm <manager>`     | Package manager: `yarn`, `npm`, or `pnpm`                            | `pnpm`           |
 | `--preset <name>`    | Preset (`default`, `massif`, `custom`, or path to `preset.json`)    | prompted         |
 | `--config <path>`    | Load config from a JSON file (skip all prompts)                      | —                |
 | `--resume`           | Resume a previously failed run, skipping completed tasks             | `false`          |
@@ -135,7 +135,7 @@ The config file's `projectDir` field provides the resume target when no position
   ],
 
   // Frontend
-  "packageManager": "yarn",          // "yarn" | "npm" | "pnpm"
+  "packageManager": "pnpm",          // "yarn" | "npm" | "pnpm"
 
   // Preset
   "preset": "default",

@@ -71,11 +71,11 @@ export async function collectConfig(
 
   const packageManager = await p.select({
     message: "Package manager",
-    initialValue: (options.pm as ViterexConfig["packageManager"]) ?? "yarn",
+    initialValue: (options.pm as ViterexConfig["packageManager"]) ?? "pnpm",
     options: [
+      { value: "pnpm", label: "pnpm" },
       { value: "yarn", label: "Yarn" },
       { value: "npm", label: "npm" },
-      { value: "pnpm", label: "pnpm" },
     ],
   });
   if (p.isCancel(packageManager)) process.exit(0);

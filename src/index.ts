@@ -25,7 +25,7 @@ program
   .option("--skip-db", "Skip database creation")
   .option("--skip-addons", "Skip addon installation")
   .option("--skip-git", "Don't initialize a git repo")
-  .option("--pm <manager>", "Package manager: yarn | npm | pnpm", "yarn")
+  .option("--pm <manager>", "Package manager: yarn | npm | pnpm", "pnpm")
   .option("--preset <name>", "Use a preset (default, massif, custom, or path to preset.json)")
   .option("--config <path>", "Path to a viterex config file (skip prompts)")
   .option("--resume", "Resume a previously failed run, skipping completed tasks")
