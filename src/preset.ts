@@ -7,12 +7,17 @@ import { ADDON_CATALOG, type AddonSelection, type PresetAddonInput, type PresetC
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const presetsDir = path.resolve(__dirname, "../presets");
 
+export interface PresetSummary {
+  name: string;
+  description?: string;
+}
+
 /**
  * Scan the built-in presets/ directory for folders containing preset.json.
  * Always appends "custom" as a virtual option.
  */
-export async function discoverPresets(): Promise<string[]> {
-  const presets: string[] = [];
+export async function discoverPresets(): Promise<PresetSummary[]> {
+  const presets: PresetSummary[] = [];
 
   if (await fs.pathExists(presetsDir)) {
     const entries = await fs.readdir(presetsDir, { withFileTypes: true });
@@ -20,13 +25,20 @@ export async function discoverPresets(): Promise<string[]> {
       if (entry.isDirectory()) {
         const configPath = path.join(presetsDir, entry.name, "preset.json");
         if (await fs.pathExists(configPath)) {
-          presets.push(entry.name);
+          let description: string | undefined;
+          try {
+            const cfg = (await fs.readJSON(configPath)) as { description?: string };
+            description = cfg.description;
+          } catch {
+            // ignore — preset will still appear, just without a hint
+          }
+          presets.push({ name: entry.name, description });
         }
       }
     }
   }
 
-  presets.push("custom");
+  presets.push({ name: "custom" });
   return presets;
 }
 

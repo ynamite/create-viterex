@@ -73,9 +73,9 @@ export async function collectConfig(
     message: "Package manager",
     initialValue: (options.pm as ViterexConfig["packageManager"]) ?? "pnpm",
     options: [
-      { value: "pnpm", label: "pnpm" },
-      { value: "yarn", label: "Yarn" },
-      { value: "npm", label: "npm" },
+      { value: "pnpm", label: "pnpm", hint: "fast, strict, content-addressable store (default)" },
+      { value: "yarn", label: "Yarn", hint: "Yarn 1.x — wide ecosystem compatibility" },
+      { value: "npm",  label: "npm",  hint: "bundled with Node — slowest install" },
     ],
   });
   if (p.isCancel(packageManager)) process.exit(0);
@@ -99,12 +99,16 @@ export async function collectConfig(
   let installerApiKey: string | undefined;
 
   if (!presetId) {
-    const presetNames = await discoverPresets();
+    const summaries = await discoverPresets();
     const selected = await p.select({
       message: "Select a preset",
-      options: presetNames.map((name) => ({
+      options: summaries.map(({ name, description }) => ({
         value: name,
-        label: name === "custom" ? "Custom (manual configuration)" : name,
+        label: name === "custom" ? "Custom" : name,
+        hint:
+          name === "custom"
+            ? "manual configuration — pick addons interactively"
+            : description,
       })),
     });
     if (p.isCancel(selected)) process.exit(0);
@@ -153,9 +157,9 @@ export async function collectConfig(
         message: "Directory layout",
         initialValue: "modern" as Layout,
         options: [
-          { value: "modern", label: "Modern (recommended) — ydeploy-opinionated; bin/, src/, var/, public/" },
-          { value: "classic", label: "Classic — Redaxo defaults; redaxo/ at project root" },
-          { value: "classic+theme", label: "Classic + theme — classic + FriendsOfREDAXO/theme addon" },
+          { value: "modern",        label: "Modern",         hint: "recommended — ydeploy-opinionated; bin/, src/, var/, public/" },
+          { value: "classic",       label: "Classic",        hint: "Redaxo defaults; redaxo/ at project root" },
+          { value: "classic+theme", label: "Classic + theme", hint: "classic + FriendsOfREDAXO/theme addon" },
         ],
       });
       if (p.isCancel(selected)) process.exit(0);
