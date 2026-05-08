@@ -57,18 +57,20 @@ create-viterex [project-name] [options]
 
 ### Options
 
+> **`--preset` vs `--config`?** A **preset** is a starting point — it pre-fills addon selection, layout, seed SQL, and template files, but you'll still answer prompts for everything not covered (project name, DB, admin user, etc.). A **config file** (the JSON written by `--generate-config`) pins *every* answer; passing `--config` skips all prompts entirely. Use `--preset` interactively, `--config` for CI.
+
 | Flag                 | Description                                                          | Default          |
 | -------------------- | -------------------------------------------------------------------- | ---------------- |
 | `--skip-db`          | Skip database creation (assume pre-populated empty DB at credentials) | `false`          |
 | `--skip-addons`      | Skip addon installation                                              | `false`          |
 | `--skip-git`         | Don't initialize a git repo                                          | `false`          |
-| `--pm <manager>`     | Package manager: `yarn`, `npm`, or `pnpm`                            | `pnpm`           |
-| `--preset <name>`    | Preset (`default`, `massif`, `custom`, or path to `preset.json`)    | prompted         |
-| `--config <path>`    | Load config from a JSON file (skip all prompts)                      | —                |
+| `--pm <manager>`     | Package manager used to install JS deps after Redaxo is set up       | `pnpm`           |
+| `--preset <name>`    | Built-in id (`default`, `massif`, `custom`) or path to a preset directory or `preset.json` | prompted |
+| `--config <path>`    | Path to a previously-generated `viterex.json` (or directory containing one); skips all prompts | — |
 | `--resume`           | Resume a previously failed run, skipping completed tasks             | `false`          |
 | `--dry-run`          | Log each task without executing anything                             | `false`          |
 | `--verbose`          | Pipe task stdout/stderr to the terminal                              | `false`          |
-| `--layout <m|c|ct>`  | Directory layout: `modern`, `classic`, `classic+theme`               | prompt (modern)  |
+| `--layout <m|c|ct>`  | Directory layout: `modern` (ydeploy, recommended), `classic` (Redaxo defaults), `classic+theme` (FriendsOfREDAXO/theme) | prompt (modern) |
 | `--fresh`            | Force fresh-install pipeline even when an existing Redaxo is detected | `false`          |
 | `--force-push`       | Allow `git push --force` when the remote already has commits         | `false`          |
 | `--with-tower`       | macOS only. Bypass the prompt and force-open Tower after a successful run. Skipped when the preset sets `withTower: false`. | prompted on macOS when `gittower` is on PATH |
