@@ -345,6 +345,8 @@ The workflow verifies the tag matches `package.json`, builds, runs tests + smoke
 
 Auth is handled via npm [Trusted Publishers](https://docs.npmjs.com/trusted-publishers) — no `NPM_TOKEN` secret required. One-time setup on npmjs.com: package page → Settings → Publishing access → "Add trusted publisher" → GitHub Actions, repository `ynamite/create-viterex`, workflow `release.yml`.
 
+To validate the pipeline without shipping, run the workflow manually via Actions → Release → "Run workflow". Dispatch runs install/build/test/smoke-test and `npm publish --dry-run` against the current `package.json` version, but skip the real publish and GitHub Release.
+
 ## License
 
 MIT
