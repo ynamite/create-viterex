@@ -53,6 +53,8 @@ pnpm test             # vitest
 
 Published usage: `npx create-viterex [project-name] [--flags]`
 
+Releases are tag-triggered: push a `v*` tag and `.github/workflows/release.yml` builds, tests, publishes to npm with provenance (via Trusted Publishers / OIDC — no `NPM_TOKEN`), and opens a GitHub Release. Pre-release versions (`-alpha.N` / `-beta.N` / `-rc.N`) auto-publish under the matching dist-tag; stable goes to `latest`. See the README "Releasing" section.
+
 ## CLI flags
 
 - `--skip-db` — skip database creation
@@ -80,7 +82,7 @@ Shipped work has moved to `CHANGELOG.md`. Remaining open items are grouped by th
 
 ### Product / roadmap
 
-- [ ] Publish to npm as `create-viterex`
+- [x] Publish to npm as `create-viterex`
 - [x] Publish `viterex_addon` to the Redaxo installer (separate repo)
 - [x] Swap `install-submodule-addons.ts` for a Redaxo-installer install once `viterex_addon` is published — it's the shared frontend logic and should be installed by default
 - [x] Ship default `templates/base/package.json.tpl` with Vite + Tailwind deps and scripts (token replacement for project name) – Update: ships with `viterex_addon` stubs instead.

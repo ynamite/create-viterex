@@ -324,6 +324,27 @@ node dist/index.js    # run locally
 ./scripts/test-run.sh # smoke tests (--dry-run scenarios)
 ```
 
+## Releasing
+
+Releases publish to npm via the `Release` GitHub Action (`.github/workflows/release.yml`), which fires on every `v*` tag. To cut a release:
+
+1. Move items from `## [Unreleased]` in `CHANGELOG.md` into a new dated section: `## [X.Y.Z] - YYYY-MM-DD`.
+2. Bump the version and create the tag:
+   ```bash
+   pnpm version patch                       # 3.0.1
+   pnpm version minor                       # 3.1.0
+   pnpm version major                       # 4.0.0
+   pnpm version prerelease --preid=alpha    # 3.0.0-alpha.2
+   ```
+3. Push commits and tags:
+   ```bash
+   git push --follow-tags
+   ```
+
+The workflow verifies the tag matches `package.json`, builds, runs tests + smoke tests, publishes to npm with [provenance](https://docs.npmjs.com/generating-provenance-statements), and opens a GitHub Release. Pre-release versions (`-alpha.N`, `-beta.N`, `-rc.N`) publish under the `alpha` / `beta` / `next` dist-tags; stable versions go to `latest`.
+
+Auth is handled via npm [Trusted Publishers](https://docs.npmjs.com/trusted-publishers) — no `NPM_TOKEN` secret required. One-time setup on npmjs.com: package page → Settings → Publishing access → "Add trusted publisher" → GitHub Actions, repository `ynamite/create-viterex`, workflow `release.yml`.
+
 ## License
 
 MIT
