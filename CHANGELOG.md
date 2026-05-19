@@ -2,11 +2,13 @@
 
 All notable changes to `create-viterex` are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project aims to
-follow [Semantic Versioning](https://semver.org/) once it ships its first
-release. Nothing has been published to npm yet — everything lives under
-`[Unreleased]`.
+follow [Semantic Versioning](https://semver.org/) once a stable release ships.
+Alpha and beta versions live in their own version sections; in-progress work
+lives under `[Unreleased]`.
 
 ## [Unreleased]
+
+## [3.0.0-alpha.1] - 2026-05-19
 
 ### Changed (2026-05-08)
 
@@ -23,6 +25,8 @@ release. Nothing has been published to npm yet — everything lives under
 - **`PresetSummary` type exported from `src/preset.ts`.** `discoverPresets()` returns `Promise<PresetSummary[]>` (was `Promise<string[]>`) so each entry can carry an optional description for hint UX. Single consumer (`src/prompts.ts`) updated atomically.
 - **Clearer `--help` strings for `--pm`, `--preset`, `--config`, `--layout`** (`src/index.ts`). Each flag's purpose is now legible standalone — readers don't need the README to disambiguate `--config` from `--preset`.
 - **README explainer paragraph** above the Options table distinguishing `--preset` ("starting point — pre-fills some answers") from `--config` ("pins every answer; for CI"). Flag-table description cells rewritten to match.
+
+## [3.0.0-alpha.0] - 2026-05-07
 
 ### Added (2026-05-01)
 
