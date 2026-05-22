@@ -65,7 +65,7 @@ create-viterex [project-name] [options]
 | `--skip-addons`      | Skip addon installation                                              | `false`          |
 | `--skip-git`         | Don't initialize a git repo                                          | `false`          |
 | `--pm <manager>`     | Package manager used to install JS deps after Redaxo is set up       | `pnpm`           |
-| `--preset <name>`    | Built-in id (`default`, `massif`, `custom`) or path to a preset directory or `preset.json` | prompted |
+| `--preset <name>`    | Built-in id (`default`, `custom`) or path to a preset directory or `preset.json` | prompted |
 | `--config <path>`    | Path to a previously-generated `viterex.json` (or directory containing one); skips all prompts | — |
 | `--resume`           | Resume a previously failed run, skipping completed tasks             | `false`          |
 | `--dry-run`          | Log each task without executing anything                             | `false`          |
@@ -207,7 +207,7 @@ Presets can supply personal/site-specific files that the installer would otherwi
 | ----------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `installerConfig` | `string`                                      | Path (relative to the preset directory) to a `redaxo_installer_config.json`. Copied to `<dataDir>/addons/install/config.json`.                   |
 | `deployerExtras`  | `string[]`                                    | List of `.php` paths (relative to the preset directory). Each file is copied to the project root, `require`'d in `deploy.php`, and added to its `clear_paths`. |
-| `filesDir`        | `string`                                      | Optional; defaults to `"files"`. Directory whose contents are merged into `projectDir`: folders are walked recursively, individual files that exist on both sides are overwritten by the preset version. |
+| `filesDir`        | `string`                                      | Optional; defaults to `"files"`. Directory whose contents are merged into `projectDir`: folders walked recursively, files overwritten by the preset version. A `package-deps.json` inside is merged into the project `package.json` (additive, higher-version-wins) instead of being copied. |
 | `layout`          | `"modern" \| "classic" \| "classic+theme"`    | Optional. When set AND a `files/` directory exists, the installer validates the user's chosen layout matches; aborts before any file is copied if not. When set, the layout prompt is skipped (the preset's value is used unless `--layout` overrides). |
 | `withTower`       | `boolean`                                     | Optional. When `false`, suppresses the "Add the repo to Git Tower?" prompt entirely. macOS-only feature; the prompt is also skipped when `gittower` isn't on PATH or the user declined to initialize a local git repo. |
 
@@ -227,6 +227,8 @@ A preset may ship arbitrary content (asset starters, sample workflow files, cust
 
 The `files/` directory is **layout-locked**: its internal structure mirrors the project tree as the preset author intends it to land on disk. Authors are expected to declare which layout the preset targets via the `layout` field; the installer validates the user's choice and skips the layout prompt accordingly. CLI `--layout` overrides the preset's declared layout, in which case the apply-preset-files task aborts with a clear error before any file is copied.
 
+One filename is special: a `package-deps.json` placed anywhere in `files/` is **merged** into the project's `package.json` (additive — existing dependencies are kept; on a version conflict the higher constraint wins) rather than copied. This lets a preset add npm dependencies on top of viterex_addon's stub `package.json` without clobbering it. The merge runs before the package-manager install, so the added dependencies are installed in the same run.
+
 Example preset slice:
 
 ```json
@@ -245,10 +247,11 @@ presets/my-preset/
 ├── deployer.task.release.acme.php
 └── files/
     ├── .env.example
+    ├── package-deps.json
     └── src/assets/img/logo.svg
 ```
 
-After install, `.env.example` lands at `<projectDir>/.env.example` and the logo at `<projectDir>/src/assets/img/logo.svg`. Choose `--layout classic` and the install aborts before any file in `files/` is touched.
+After install, `.env.example` lands at `<projectDir>/.env.example`, the logo at `<projectDir>/src/assets/img/logo.svg`, and `package-deps.json`'s entries are merged into the project `package.json`. Choose `--layout classic` and the install aborts before any file in `files/` is touched.
 
 ## Pipeline
 
@@ -261,7 +264,7 @@ After install, `.env.example` lands at `<projectDir>/.env.example` and the logo 
  6  Scaffold frontend (Vite, configs)        — both modes
  7  Apply preset files                       — copy preset's files/ into projectDir, merging folders and overwriting individual files; skip when no presetFilesDir
  8  Seed database                             — skip when augment OR --skip-db OR no seedFile
- 9  Install dependencies (composer + pm)      — both modes; runs AFTER step 7 so a preset rewriting package.json is honored
+ 9  Install dependencies (composer + pm)      — both modes; runs AFTER step 7 so preset files and deps land before install
 10  Initialize git repo                       — skip if .git/ exists or --skip-git
 11  Add submodule addons (preset extras)      — runs AFTER deps; skip if --skip-git or none
 12  Activate submodule addons                 — composer install + package:install/activate

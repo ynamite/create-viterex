@@ -102,7 +102,7 @@ run_test "--version flag" $CLI --version
 # ─── 2. Fresh modern via --config + --dry-run ─────────────────────────
 CONFIG_FRESH=$(make_fresh_modern_config fresh-modern)
 
-echo "--- TEST: fresh modern --dry-run lists all 14 tasks"
+echo "--- TEST: fresh modern --dry-run lists the pipeline tasks"
 OUTPUT=$($CLI --config "$CONFIG_FRESH" --dry-run 2>&1)
 assert_contains "fresh modern tasks" "$OUTPUT" \
   "Configure composer" \
