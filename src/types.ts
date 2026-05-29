@@ -82,6 +82,14 @@ export interface AddonSelection {
  */
 export type PresetAddonInput = string | AddonSelection;
 
+/**
+ * A preset's installer configuration.
+ *
+ * Any scalar field below that maps to an interactive prompt follows one rule:
+ * **when the preset sets it, that value is used and the prompt is skipped**
+ * (a CLI flag still wins over the preset). Fields the preset omits are
+ * prompted as usual. The resolution lives in `src/utils/resolve-preset-values.ts`.
+ */
 export interface PresetConfig {
   name: string;
   description: string;
@@ -92,11 +100,65 @@ export interface PresetConfig {
   customPrompts?: CustomPromptDef[];
   installerConfig?: string; // relative to preset dir
   deployerExtras?: string[]; // .php paths relative to preset dir; required'd at deploy.php line 31 + added to clear_paths
-  redaxoLang?: string; // override prompt default; e.g. "de_de"
-  redaxoTimezone?: string; // override prompt default; e.g. "Europe/Berlin"
   layout?: Layout; // when set AND files/ exists, validated against the user's chosen layout
   filesDir?: string; // relative to preset dir; defaults to "files"; contents copied into projectDir — a package-deps.json inside is merged into package.json instead of copied
-  withTower?: boolean; // when false, suppress the "Add to Git Tower?" prompt entirely
+
+  // Redaxo (each skips its prompt when set)
+  redaxoVersion?: string;
+  redaxoServerName?: string; // local vhost URL
+  redaxoAdminUser?: string;
+  /**
+   * Admin password. Discouraged — a password in a committed preset is a
+   * security smell. Omit it to be prompted (the recommended default). When
+   * set it must satisfy Redaxo's 8–4096-char rule, else it's ignored and
+   * the prompt runs instead.
+   */
+  redaxoAdminPassword?: string;
+  redaxoAdminEmail?: string;
+  redaxoErrorEmail?: string;
+  redaxoLang?: string; // e.g. "de_de"
+  redaxoTimezone?: string; // e.g. "Europe/Berlin"
+
+  // Database (each skips its prompt when set; dbName stays prompted unless given)
+  skipDb?: boolean;
+  dbHost?: string;
+  dbPort?: number;
+  dbName?: string;
+  dbUser?: string;
+  dbPassword?: string;
+
+  // Frontend / deploy
+  packageManager?: "yarn" | "npm" | "pnpm";
+  setupDeploy?: boolean;
+
+  // Git
+  skipGit?: boolean;
+  gitProvider?: string; // ""  = explicitly no remote; non-empty = remote host, skips the remote prompts
+  gitNamespace?: string;
+  gitRepoName?: string;
+  withTower?: boolean; // when set, replaces the "Add to Git Tower?" prompt (still macOS + gittower-gated)
+
+  // Runtime flags
+  verbose?: boolean;
+  forcePush?: boolean;
+}
+
+/**
+ * Parsed CLI flags. A flag, when present, takes precedence over the preset
+ * value for the same field.
+ */
+export interface CliOptions {
+  pm?: string;
+  preset?: string;
+  layout?: string;
+  skipDb?: boolean;
+  skipAddons?: boolean;
+  skipGit?: boolean;
+  fresh?: boolean;
+  forcePush?: boolean;
+  withTower?: boolean;
+  lang?: string;
+  timezone?: string;
 }
 
 export interface SubmoduleAddon {

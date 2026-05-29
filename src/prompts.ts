@@ -1,26 +1,13 @@
 import * as p from "@clack/prompts";
 import path from "node:path";
 import fs from "fs-extra";
-import { ADDON_CATALOG, ALWAYS_INCLUDED, type Layout, type ViterexConfig } from "./types.js";
+import { ADDON_CATALOG, ALWAYS_INCLUDED, type CliOptions, type Layout, type ViterexConfig } from "./types.js";
 import { discoverPresets, loadPreset, resolveSeedFile } from "./preset.js";
+import { resolvePresetValues } from "./utils/resolve-preset-values.js";
 import { promptAugmentAddons } from "./tasks/augment-prompt.js";
 import { dataDirFor, type DetectionResult } from "./utils/detect.js";
 import { commandExists } from "./utils/exec.js";
 import { getLatestRedaxoVersion } from "./utils/redaxo-version.js";
-
-interface CliOptions {
-  pm?: string;
-  preset?: string;
-  layout?: string;
-  skipDb?: boolean;
-  skipAddons?: boolean;
-  skipGit?: boolean;
-  fresh?: boolean;
-  forcePush?: boolean;
-  withTower?: boolean;
-  lang?: string;
-  timezone?: string;
-}
 
 export async function collectConfig(
   projectNameArg: string | undefined,
@@ -61,30 +48,11 @@ export async function collectConfig(
   });
   if (p.isCancel(projectName)) process.exit(0);
 
-  const serverName = await p.text({
-    message: "Local server name (vhost URL)",
-    placeholder: `${projectName as string}.test`,
-    initialValue:
-      augmentExistingValues?.serverName ?? `${projectName as string}.test`,
-  });
-  if (p.isCancel(serverName)) process.exit(0);
-
-  const packageManager = await p.select({
-    message: "Package manager",
-    initialValue: (options.pm as ViterexConfig["packageManager"]) ?? "pnpm",
-    options: [
-      { value: "pnpm", label: "pnpm", hint: "fast, strict, content-addressable store (default)" },
-      { value: "yarn", label: "Yarn", hint: "Yarn 1.x — wide ecosystem compatibility" },
-      { value: "npm",  label: "npm",  hint: "bundled with Node — slowest install" },
-    ],
-  });
-  if (p.isCancel(packageManager)) process.exit(0);
-
   // ─── Preset selection ─────────────────────────────────────────────
-  // Runs before layout selection so a preset that declares a `layout` can
-  // skip the layout prompt entirely. CLI `--layout` still wins over the
-  // preset's declared layout; if they disagree the apply-preset-files task
-  // errors out before any file is touched.
+  // Loaded right after the project name so every prompt below can be skipped
+  // when the preset already supplies its value. CLI flags still win over the
+  // preset; for `--layout`, if it disagrees with the preset the
+  // apply-preset-files task errors out before any file is touched.
   let presetId = (options.preset as string) ?? "";
   let presetDir: string | undefined;
   let presetLayout: Layout | undefined;
@@ -144,6 +112,44 @@ export async function collectConfig(
     }
   }
 
+  // Resolve every other preset/CLI value once. A defined field means "use it
+  // and SKIP the prompt"; undefined means "prompt as usual" (CLI flag > preset).
+  const resolved = resolvePresetValues(loaded?.config, options);
+  if (resolved.fromPreset.length > 0) {
+    p.log.info(
+      `Using values from preset '${presetId}': ${resolved.fromPreset.join(", ")}`,
+    );
+  }
+  for (const w of resolved.warnings) p.log.warn(w);
+
+  // ─── Project basics (cont.) ───────────────────────────────────────
+  let serverName = resolved.redaxoServerName;
+  if (serverName === undefined) {
+    const answer = await p.text({
+      message: "Local server name (vhost URL)",
+      placeholder: `${projectName as string}.test`,
+      initialValue:
+        augmentExistingValues?.serverName ?? `${projectName as string}.test`,
+    });
+    if (p.isCancel(answer)) process.exit(0);
+    serverName = answer as string;
+  }
+
+  let packageManager = resolved.packageManager;
+  if (packageManager === undefined) {
+    const answer = await p.select({
+      message: "Package manager",
+      initialValue: (options.pm as ViterexConfig["packageManager"]) ?? "pnpm",
+      options: [
+        { value: "pnpm", label: "pnpm", hint: "fast, strict, content-addressable store (default)" },
+        { value: "yarn", label: "Yarn", hint: "Yarn 1.x — wide ecosystem compatibility" },
+        { value: "npm",  label: "npm",  hint: "bundled with Node — slowest install" },
+      ],
+    });
+    if (p.isCancel(answer)) process.exit(0);
+    packageManager = answer as ViterexConfig["packageManager"];
+  }
+
   // ─── Layout (fresh only) ──────────────────────────────────────────
   let layout: Layout = detection.layout;
   if (!isAugment) {
@@ -168,65 +174,73 @@ export async function collectConfig(
   }
 
   // ─── Redaxo config (fresh only) ───────────────────────────────────
-  let redaxoVersion = "5.20.2";
-  let adminUser = "admin";
-  let adminPassword = "";
-  let adminEmail = "";
-  let errorEmail = "";
-  // Preset > CLI flag > system default. System timezone via Intl
-  // (resolves to e.g. "Europe/Zurich" on macOS); falls back to UTC if missing.
+  // Each local is seeded from the resolved preset value (when present); the
+  // matching prompt below only runs when the preset left it undefined.
+  let redaxoVersion = resolved.redaxoVersion ?? "5.20.2";
+  let adminUser = resolved.redaxoAdminUser ?? "admin";
+  let adminPassword = resolved.redaxoAdminPassword ?? "";
+  let adminEmail = resolved.redaxoAdminEmail ?? "";
+  let errorEmail = resolved.redaxoErrorEmail ?? "";
+  // System timezone via Intl (e.g. "Europe/Zurich" on macOS); UTC fallback.
   const systemTimezone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  let lang =
-    options.lang ?? loaded?.config.redaxoLang ?? "de_de";
-  let timezone =
-    options.timezone ?? loaded?.config.redaxoTimezone ?? systemTimezone;
+  let lang = resolved.redaxoLang ?? "de_de";
+  let timezone = resolved.redaxoTimezone ?? systemTimezone;
 
   if (!isAugment) {
-    // Resolve the latest Redaxo release as the prompt default; falls back to
-    // the bundled FALLBACK_VERSION if the network call fails.
-    const latestVersion = await getLatestRedaxoVersion();
-    redaxoVersion = latestVersion;
-    const versionAnswer = await p.text({ message: "Redaxo version", initialValue: redaxoVersion });
-    if (p.isCancel(versionAnswer)) process.exit(0);
-    redaxoVersion = versionAnswer as string;
+    if (resolved.redaxoVersion === undefined) {
+      // Resolve the latest Redaxo release as the prompt default; falls back to
+      // the bundled FALLBACK_VERSION if the network call fails.
+      redaxoVersion = await getLatestRedaxoVersion();
+      const versionAnswer = await p.text({ message: "Redaxo version", initialValue: redaxoVersion });
+      if (p.isCancel(versionAnswer)) process.exit(0);
+      redaxoVersion = versionAnswer as string;
+    }
 
-    const adminUserAnswer = await p.text({ message: "Admin username", initialValue: adminUser });
-    if (p.isCancel(adminUserAnswer)) process.exit(0);
-    adminUser = adminUserAnswer as string;
+    if (resolved.redaxoAdminUser === undefined) {
+      const adminUserAnswer = await p.text({ message: "Admin username", initialValue: adminUser });
+      if (p.isCancel(adminUserAnswer)) process.exit(0);
+      adminUser = adminUserAnswer as string;
+    }
 
-    const adminPasswordAnswer = await p.password({
-      message: "Admin password (Redaxo rule: 8–4096 characters)",
-      validate: (v) => {
-        if (v.length < 8) return "Must be at least 8 characters (Redaxo password rule).";
-        if (v.length > 4096) return "Must be at most 4096 characters.";
-      },
-    });
-    if (p.isCancel(adminPasswordAnswer)) process.exit(0);
-    adminPassword = adminPasswordAnswer as string;
+    if (resolved.redaxoAdminPassword === undefined) {
+      const adminPasswordAnswer = await p.password({
+        message: "Admin password (Redaxo rule: 8–4096 characters)",
+        validate: (v) => {
+          if (v.length < 8) return "Must be at least 8 characters (Redaxo password rule).";
+          if (v.length > 4096) return "Must be at most 4096 characters.";
+        },
+      });
+      if (p.isCancel(adminPasswordAnswer)) process.exit(0);
+      adminPassword = adminPasswordAnswer as string;
+    }
 
-    const adminEmailAnswer = await p.text({
-      message: "Admin email",
-      validate: (v) => (!v.includes("@") ? "Enter a valid email" : undefined),
-    });
-    if (p.isCancel(adminEmailAnswer)) process.exit(0);
-    adminEmail = adminEmailAnswer as string;
+    if (resolved.redaxoAdminEmail === undefined) {
+      const adminEmailAnswer = await p.text({
+        message: "Admin email",
+        validate: (v) => (!v.includes("@") ? "Enter a valid email" : undefined),
+      });
+      if (p.isCancel(adminEmailAnswer)) process.exit(0);
+      adminEmail = adminEmailAnswer as string;
+    }
 
-    const errorEmailAnswer = await p.text({
-      message: "Error notification email",
-      initialValue: adminEmail,
-      validate: (v) => (!v.includes("@") ? "Enter a valid email" : undefined),
-    });
-    if (p.isCancel(errorEmailAnswer)) process.exit(0);
-    errorEmail = errorEmailAnswer as string;
+    if (resolved.redaxoErrorEmail === undefined) {
+      const errorEmailAnswer = await p.text({
+        message: "Error notification email",
+        initialValue: adminEmail,
+        validate: (v) => (!v.includes("@") ? "Enter a valid email" : undefined),
+      });
+      if (p.isCancel(errorEmailAnswer)) process.exit(0);
+      errorEmail = errorEmailAnswer as string;
+    }
 
-    if (!options.lang) {
+    if (resolved.redaxoLang === undefined) {
       const langAnswer = await p.text({ message: "Redaxo language", initialValue: lang });
       if (p.isCancel(langAnswer)) process.exit(0);
       lang = langAnswer as string;
     }
 
-    if (!options.timezone) {
+    if (resolved.redaxoTimezone === undefined) {
       const tzAnswer = await p.text({ message: "Timezone", initialValue: timezone });
       if (p.isCancel(tzAnswer)) process.exit(0);
       timezone = tzAnswer as string;
@@ -258,38 +272,46 @@ export async function collectConfig(
   }
 
   // ─── Database (fresh only) ────────────────────────────────────────
-  let db = {
-    skipDb: !!options.skipDb,
-    host: "127.0.0.1",
-    port: 3306,
-    name: "",
-    user: "root",
-    password: "",
+  // Preset/CLI values skip their prompt; dbName is per-project, so it's still
+  // prompted (default: slugified project name) unless the preset sets it.
+  const db = {
+    skipDb: resolved.skipDb,
+    host: resolved.dbHost ?? "127.0.0.1",
+    port: resolved.dbPort ?? 3306,
+    name: resolved.dbName ?? "",
+    user: resolved.dbUser ?? "root",
+    password: resolved.dbPassword ?? "",
   };
 
-  if (!isAugment && !options.skipDb) {
-    const host = await p.text({ message: "DB host", initialValue: "127.0.0.1" });
-    if (p.isCancel(host)) process.exit(0);
-    const port = await p.text({ message: "DB port", initialValue: "3306" });
-    if (p.isCancel(port)) process.exit(0);
-    const dbName = await p.text({
-      message: "DB name",
-      initialValue: (projectName as string).replace(/-/g, "_"),
-    });
-    if (p.isCancel(dbName)) process.exit(0);
-    const user = await p.text({ message: "DB user", initialValue: "root" });
-    if (p.isCancel(user)) process.exit(0);
-    const password = await p.password({ message: "DB password" });
-    if (p.isCancel(password)) process.exit(0);
-
-    db = {
-      skipDb: false,
-      host: host as string,
-      port: parseInt(port as string),
-      name: dbName as string,
-      user: user as string,
-      password: password as string,
-    };
+  if (!isAugment && !db.skipDb) {
+    if (resolved.dbHost === undefined) {
+      const host = await p.text({ message: "DB host", initialValue: "127.0.0.1" });
+      if (p.isCancel(host)) process.exit(0);
+      db.host = host as string;
+    }
+    if (resolved.dbPort === undefined) {
+      const port = await p.text({ message: "DB port", initialValue: "3306" });
+      if (p.isCancel(port)) process.exit(0);
+      db.port = parseInt(port as string);
+    }
+    if (resolved.dbName === undefined) {
+      const dbName = await p.text({
+        message: "DB name",
+        initialValue: (projectName as string).replace(/-/g, "_"),
+      });
+      if (p.isCancel(dbName)) process.exit(0);
+      db.name = dbName as string;
+    }
+    if (resolved.dbUser === undefined) {
+      const user = await p.text({ message: "DB user", initialValue: "root" });
+      if (p.isCancel(user)) process.exit(0);
+      db.user = user as string;
+    }
+    if (resolved.dbPassword === undefined) {
+      const password = await p.password({ message: "DB password" });
+      if (p.isCancel(password)) process.exit(0);
+      db.password = password as string;
+    }
   }
 
   // ─── Addon selection ──────────────────────────────────────────────
@@ -375,42 +397,54 @@ export async function collectConfig(
   }
 
   // ─── Frontend / deploy ────────────────────────────────────────────
-  const setupDeploy = await p.confirm({ message: "Set up ydeploy?", initialValue: true });
-  if (p.isCancel(setupDeploy)) process.exit(0);
+  let setupDeploy = resolved.setupDeploy;
+  if (setupDeploy === undefined) {
+    const answer = await p.confirm({ message: "Set up ydeploy?", initialValue: true });
+    if (p.isCancel(answer)) process.exit(0);
+    setupDeploy = answer as boolean;
+  }
 
   // ─── Git ──────────────────────────────────────────────────────────
-  // Local first, then remote (only if local).
-  let skipGit = !!options.skipGit;
+  // Local first, then remote (only if local). Preset/CLI values skip prompts.
+  let skipGit = resolved.skipGit ?? false;
   let gitProvider = "";
   let gitNamespace = "";
   let gitRepoName = "";
   let withTower = false;
 
-  if (!skipGit) {
+  // Ask whether to init a local repo only when neither CLI flag nor preset said.
+  if (resolved.skipGit === undefined) {
     const initLocal = await p.confirm({
       message: "Initialize a local git repository?",
       initialValue: true,
     });
     if (p.isCancel(initLocal)) process.exit(0);
     skipGit = !initLocal;
+  }
 
-    if (!skipGit) {
-      // Tower (macOS-only opt-in). Skip if preset opts out, or gittower
-      // isn't on PATH, or the user declined local git above.
-      const presetTower = loaded?.config.withTower;
-      if (
-        process.platform === "darwin" &&
-        presetTower !== false &&
-        (await commandExists("gittower"))
-      ) {
+  if (!skipGit) {
+    // Tower (macOS-only opt-in, gittower must be on PATH). A preset/CLI value
+    // replaces the prompt; `true` still requires the platform + binary.
+    if (process.platform === "darwin" && (await commandExists("gittower"))) {
+      if (resolved.withTower !== undefined) {
+        withTower = resolved.withTower;
+      } else {
         const answer = await p.confirm({
           message: "Add the repo to Git Tower?",
-          initialValue: presetTower === true,
+          initialValue: false,
         });
         if (p.isCancel(answer)) process.exit(0);
         withTower = answer as boolean;
       }
+    }
 
+    if (resolved.gitRemote !== undefined) {
+      // Preset specified the remote (empty provider ⇒ no remote). An empty
+      // repo name defaults to the project name, mirroring the interactive prompt.
+      gitProvider = resolved.gitRemote.provider;
+      gitNamespace = resolved.gitRemote.namespace;
+      gitRepoName = resolved.gitRemote.repoName || (projectName as string);
+    } else {
       const setupRemote = await p.confirm({
         message: "Create a remote git repository?",
         initialValue: false,
@@ -478,14 +512,14 @@ export async function collectConfig(
     seedFile,
     submoduleAddons,
     templateReplacements,
-    setupDeploy: setupDeploy as boolean,
+    setupDeploy,
     skipGit,
     gitProvider,
     gitNamespace,
     gitRepoName,
-    verbose: false,
-    forcePush: !!options.forcePush,
-    withTower: withTower || !!options.withTower,
+    verbose: resolved.verbose,
+    forcePush: resolved.forcePush,
+    withTower,
     installerConfig,
     deployerExtras,
     installerApiLogin,

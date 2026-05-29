@@ -57,7 +57,7 @@ create-viterex [project-name] [options]
 
 ### Options
 
-> **`--preset` vs `--config`?** A **preset** is a starting point — it pre-fills addon selection, layout, seed SQL, and template files, but you'll still answer prompts for everything not covered (project name, DB, admin user, etc.). A **config file** (the JSON written by `--generate-config`) pins *every* answer; passing `--config` skips all prompts entirely. Use `--preset` interactively, `--config` for CI.
+> **`--preset` vs `--config`?** A **preset** is a starting point — it pre-fills addon selection, layout, seed SQL, template files, and any installer value it declares (DB, admin email, package manager, …), skipping those prompts; you only answer what the preset leaves out (e.g. project name, and — by design — the admin password). A **config file** (the JSON written by `--generate-config`) pins *every* answer; passing `--config` skips all prompts entirely. Use `--preset` interactively, `--config` for CI.
 
 | Flag                 | Description                                                          | Default          |
 | -------------------- | -------------------------------------------------------------------- | ---------------- |
@@ -201,7 +201,7 @@ Custom prompts defined in a preset's `customPrompts` array populate the `templat
 
 ## Preset extension
 
-Presets can supply personal/site-specific files that the installer would otherwise prompt for or skip.
+Presets can supply personal/site-specific files **and pre-fill any installer prompt** — when the preset sets a value, that prompt is skipped (see _Installer values_ below).
 
 | Preset field      | Type                                          | Effect at scaffold time                                                                                                                          |
 | ----------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -209,7 +209,16 @@ Presets can supply personal/site-specific files that the installer would otherwi
 | `deployerExtras`  | `string[]`                                    | List of `.php` paths (relative to the preset directory). Each file is copied to the project root, `require`'d in `deploy.php`, and added to its `clear_paths`. |
 | `filesDir`        | `string`                                      | Optional; defaults to `"files"`. Directory whose contents are merged into `projectDir`: folders walked recursively, files overwritten by the preset version. A `package-deps.json` inside is merged into the project `package.json` (additive, higher-version-wins) instead of being copied. |
 | `layout`          | `"modern" \| "classic" \| "classic+theme"`    | Optional. When set AND a `files/` directory exists, the installer validates the user's chosen layout matches; aborts before any file is copied if not. When set, the layout prompt is skipped (the preset's value is used unless `--layout` overrides). |
-| `withTower`       | `boolean`                                     | Optional. When `false`, suppresses the "Add the repo to Git Tower?" prompt entirely. macOS-only feature; the prompt is also skipped when `gittower` isn't on PATH or the user declined to initialize a local git repo. |
+| `withTower`       | `boolean`                                     | Optional. When set (`true`/`false`), replaces the "Add the repo to Git Tower?" prompt. macOS-only feature; `true` still requires `gittower` on PATH and a local git repo. |
+
+**Installer values (skip prompts):**
+
+Beyond the file/path fields above, a preset may set **any** scalar installer field, in which case its prompt is skipped (a one-line `Using values from preset '<name>': …` summary is logged). Supported fields: `redaxoVersion`, `redaxoServerName`, `redaxoAdminUser`, `redaxoAdminPassword`, `redaxoAdminEmail`, `redaxoErrorEmail`, `redaxoLang`, `redaxoTimezone`; `skipDb`, `dbHost`, `dbPort`, `dbName`, `dbUser`, `dbPassword`; `packageManager`, `setupDeploy`; `skipGit`, `gitProvider`, `gitNamespace`, `gitRepoName`; `verbose`, `forcePush`. Precedence is **CLI flag > preset value > prompt/default**. Notes:
+
+- An empty `gitProvider` (`""`) means **explicitly no remote** — the remote prompts are skipped and none is created. A non-empty `gitProvider` + `gitNamespace` + `gitRepoName` configures the remote without prompting.
+- `dbName` stays prompted (default: slugified project name) **unless** the preset sets it — it's per-project.
+- `redaxoAdminPassword` in a preset is **discouraged** (a password in a committed file is a security smell). When present it must satisfy Redaxo's 8–4096-char rule, else it's ignored with a warning and you're prompted. Omit it to always be prompted.
+- `--config <path>` is unaffected — it loads a full config and skips all prompts regardless.
 
 **Precedence (installer config):**
 
@@ -265,15 +274,15 @@ After install, `.env.example` lands at `<projectDir>/.env.example`, the logo at 
  7  Apply preset files                       — copy preset's files/ into projectDir, merging folders and overwriting individual files; skip when no presetFilesDir
  8  Seed database                             — skip when augment OR --skip-db OR no seedFile
  9  Install dependencies (composer + pm)      — both modes; runs AFTER step 7 so preset files and deps land before install
-10  Initialize git repo                       — skip if .git/ exists or --skip-git
+10  Initialize git repo                       — git init only (early; `git submodule add` needs .git); skip if .git/ exists or --skip-git
 11  Add submodule addons (preset extras)      — runs AFTER deps; skip if --skip-git or none
 12  Activate submodule addons                 — composer install + package:install/activate
-13  Sync developer + clear cache              — `developer:sync` (gated on the developer addon; non-fatal) → `cache:clear`; runs before the initial commit so any FS writes from sync land in it
-14  Git initial commit                        — skip if HEAD exists or --skip-git
-15  Create remote git repository              — skip if no provider or --skip-git
-16  Build frontend                            — `<pm> run build`; skip if no `package.json`; non-fatal — warns and continues on failure
+13  Sync developer + clear cache              — `developer:sync` (gated on the developer addon; non-fatal) → `cache:clear`
+14  Build frontend                            — refresh browserslist DB + `<pm> run build`; skip if no `package.json`; both steps non-fatal (warn + continue)
+15  Git initial commit                        — the LAST file-touching task, so `git status` is clean afterward; skip if HEAD exists or --skip-git
+16  Create remote git repository              — push (needs the commit); skip if no provider or --skip-git
 17  Open frontend and backend in browser      — both
-18  Show next steps                           — refresh browserslist + print `<pm> run dev` instruction
+18  Show next steps                           — print the `<pm> run dev` instruction (display only)
 ```
 
 Each task is idempotent — re-running on a partially-set-up project converges instead of erroring. Resume from a specific failure with `--resume`.

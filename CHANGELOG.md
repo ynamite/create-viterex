@@ -8,6 +8,18 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+### Added (2026-05-29)
+
+- **Presets can pre-fill — and thereby skip — any installer prompt.** A `preset.json` may now set any scalar installer field (`redaxoVersion`, `redaxoServerName`, `redaxoAdminUser`/`redaxoAdminPassword`/`redaxoAdminEmail`/`redaxoErrorEmail`, `redaxoLang`, `redaxoTimezone`, `skipDb`, `dbHost`/`dbPort`/`dbName`/`dbUser`/`dbPassword`, `packageManager`, `setupDeploy`, `skipGit`, `gitProvider`/`gitNamespace`/`gitRepoName`, `withTower`, `verbose`, `forcePush`). When the preset supplies a value the matching prompt is skipped and a one-line `Using values from preset '<name>': …` summary is logged. Previously these fields existed on `ViterexConfig` but were never read from a preset (only `redaxoLang`/`redaxoTimezone`/`layout`/`withTower`/`filesDir`/addons/seed/installer/deployer fields were), so e.g. a preset's `redaxoAdminEmail` was silently ignored and prompted for anyway. Precedence is **CLI flag > preset value > prompt/default**. New pure, unit-tested resolver `src/utils/resolve-preset-values.ts`; `PresetConfig` (`src/types.ts`) extended with the fields and `CliOptions` moved there for shared use; `src/prompts.ts` now loads the preset right after the project-name prompt so all later prompts can be skipped. Notes: an empty `gitProvider` (`""`) means "explicitly no remote"; `dbName` stays prompted (per-project) unless the preset sets it; a preset `redaxoAdminPassword` is honoured only if it meets Redaxo's 8–4096-char rule, else ignored with a warning and prompted. The `--config <path>` path is unchanged.
+
+### Fixed (2026-05-29)
+
+- **`git status` is clean immediately after install.** The *Git initial commit* task is now the **last** file-touching step in the pipeline (`src/pipeline.ts`). Previously *Build frontend* (Vite output) and the browserslist refresh ran *after* the commit, leaving the freshly-scaffolded working tree dirty. *Build frontend* now runs before the commit (and absorbs the `npx update-browserslist-db@latest` refresh that used to live in *Show next steps*, each step warn-and-continue); the remote push, browser open, and next-steps message run after the commit and touch no tracked files. `git init` still runs early (before *Add submodule addons*, which needs `.git`); only the commit moved. Task count unchanged (18); names unchanged, so `--resume` is unaffected. New ordering test: `src/__tests__/pipeline-order.test.ts`.
+
+### Changed (2026-05-19)
+
+- **A preset's frontend now installs through the generic `filesDir` overlay.** The short-lived dedicated `frontendDir` task was folded into *Apply preset files*: a preset directory whose tree mirrors the project (`src/…`, `public/…`) is copied verbatim, and a `package-deps.json` placed in it is merged into the project `package.json` (additive, higher-version-wins) before the dependency install instead of being copied. New helper `src/utils/merge-package-deps.ts`. Consumed by the external `viterex-massif-preset` repo (`"filesDir": "frontend"`).
+
 ## [3.0.0-alpha.1] - 2026-05-19
 
 ### Changed (2026-05-08)

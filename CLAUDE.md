@@ -18,7 +18,7 @@ Three-layer design:
    - `install-addons.ts` — Loop: download → install → activate per addon via Redaxo CLI
    - `scaffold-frontend.ts` — Copy template files and generate .env
    - `install-deps.ts` — composer install + yarn/npm/pnpm install
-   - `init-git.ts` — git init + initial commit
+   - `init-git.ts` — `initGitRepo` (git init, early — `git submodule add` needs `.git`) + `gitInitialCommit` (the **last** file-touching task, so the user ends on a clean `git status`). Build + browserslist refresh run before the commit; push/browser/next-steps run after it and touch no tracked files.
 
 ## Tech stack
 
@@ -40,6 +40,10 @@ Three-layer design:
 ## Preset `addons` format
 
 A preset's `addons` field accepts two interchangeable forms — strings (`"adminer"`) or full `AddonSelection` objects (`{ key, install, activate, plugins? }`). Strings are normalized to objects at load time in `src/preset.ts#loadPreset` via `normalizePresetAddon`; for keys present in `ADDON_CATALOG`, the matching `plugins` are auto-applied (mirroring the multiselect path in `prompts.ts`). Mixed arrays work. See `presets/default/preset.json` for the shorthand form; the external `viterex-massif-preset` repo (consumed via `--preset <path>`) uses the verbose object form.
+
+## Preset value resolution (skip prompts)
+
+A `preset.json` may set **any** installer field declared on `PresetConfig` (`src/types.ts`) — Redaxo admin/error email, server name, version, admin user/password; DB host/port/name/user/password and `skipDb`; `packageManager`, `setupDeploy`; `skipGit`, the `gitProvider`/`gitNamespace`/`gitRepoName` remote trio, `withTower`; `verbose`, `forcePush`. **When the preset supplies a value, that prompt is skipped** (a one-line `Using values from preset '<name>': …` summary is logged); fields the preset omits are still prompted. Precedence is **CLI flag > preset value > prompt/default**, resolved in `src/utils/resolve-preset-values.ts` (pure, unit-tested) and consumed in `src/prompts.ts` (loaded right after the project-name prompt so all later prompts can be skipped). Notes: an empty `gitProvider` (`""`) means "explicitly no remote"; `dbName` stays prompted unless the preset sets it (it's per-project); a preset `redaxoAdminPassword` is honoured only if it satisfies Redaxo's 8–4096-char rule, else it's ignored with a warning and prompted. The `--config <path>` path is unaffected — it loads a full `ViterexConfig` and bypasses prompts entirely.
 
 ## Build & run
 

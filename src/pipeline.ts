@@ -37,8 +37,10 @@ const isAugment = (c: ViterexConfig) => c.installMode === "augment";
 /**
  * The ordered installation pipeline. Each task is idempotent —
  * if it fails, fix the issue and re-run with --resume (or just re-run).
+ *
+ * Exported so the ordering can be asserted in tests.
  */
-const tasks: Task[] = [
+export const tasks: Task[] = [
   {
     name: "Configure composer (.tools/, deployer)",
     run: configureComposer,
@@ -100,12 +102,21 @@ const tasks: Task[] = [
     skip: (c) => !c.submoduleAddons?.length,
     run: activateSubmoduleAddons,
   },
-  // Run developer:sync + cache:clear BEFORE the git initial commit so any
-  // FS writes from developer:sync (templates/modules pulled out of the DB)
-  // land in the first commit instead of as dirty working-tree state.
+  // Everything that writes to the working tree must run BEFORE the git initial
+  // commit so the user ends on a clean `git status`:
+  //  - developer:sync pulls templates/modules out of the DB onto disk;
+  //  - build-frontend writes Vite output and refreshes the browserslist DB
+  //    (which rewrites the lockfile).
+  // The commit is therefore the LAST file-touching task; the remote push,
+  // browser open, and next-steps message run after it and touch no tracked files.
   {
     name: "Sync developer + clear cache",
     run: clearCache,
+  },
+  {
+    name: "Build frontend",
+    skip: (c) => !fs.existsSync(path.join(c.projectDir, "package.json")),
+    run: buildFrontend,
   },
   {
     name: "Git initial commit",
@@ -116,11 +127,6 @@ const tasks: Task[] = [
     name: "Create remote git repository",
     skip: (c) => c.skipGit || !c.gitProvider,
     run: createGitRemote,
-  },
-  {
-    name: "Build frontend",
-    skip: (c) => !fs.existsSync(path.join(c.projectDir, "package.json")),
-    run: buildFrontend,
   },
   {
     name: "Open frontend and backend in browser",
