@@ -14,7 +14,9 @@ describe("resolvePresetValues", () => {
     expect(r.packageManager).toBeUndefined();
     expect(r.setupDeploy).toBeUndefined();
     expect(r.skipGit).toBeUndefined();
-    expect(r.gitRemote).toBeUndefined();
+    expect(r.gitProvider).toBeUndefined();
+    expect(r.gitNamespace).toBeUndefined();
+    expect(r.gitRepoName).toBeUndefined();
     expect(r.withTower).toBeUndefined();
     // No-prompt booleans always carry a final value.
     expect(r.skipDb).toBe(false);
@@ -103,31 +105,43 @@ describe("resolvePresetValues", () => {
     });
   });
 
-  describe("git remote", () => {
-    it("treats an empty provider as 'explicitly no remote' and skips the prompts", () => {
-      const r = resolvePresetValues(
-        { ...base, gitProvider: "", gitNamespace: "", gitRepoName: "" },
-        NO_OPTS,
-      );
-      expect(r.gitRemote).toEqual({ provider: "", namespace: "", repoName: "" });
+  describe("git remote (per-field)", () => {
+    it("treats an empty provider as 'explicitly no remote'", () => {
+      const r = resolvePresetValues({ ...base, gitProvider: "" }, NO_OPTS);
+      expect(r.gitProvider).toBe("");
       expect(r.fromPreset).toContain("gitProvider");
     });
 
-    it("uses a non-empty provider trio", () => {
+    it("takes provider + namespace from the preset but leaves repoName to prompt when omitted", () => {
+      // mirrors the massif preset: provider + namespace set, gitRepoName removed.
       const r = resolvePresetValues(
-        { ...base, gitProvider: "github.com", gitNamespace: "acme", gitRepoName: "site" },
+        { ...base, gitProvider: "github.com", gitNamespace: "massif-web" },
         NO_OPTS,
       );
-      expect(r.gitRemote).toEqual({
-        provider: "github.com",
-        namespace: "acme",
-        repoName: "site",
-      });
+      expect(r.gitProvider).toBe("github.com");
+      expect(r.gitNamespace).toBe("massif-web");
+      expect(r.gitRepoName).toBeUndefined(); // => prompt, default project name
+      expect(r.fromPreset).toEqual(
+        expect.arrayContaining(["gitProvider", "gitNamespace"]),
+      );
+      expect(r.fromPreset).not.toContain("gitRepoName");
     });
 
-    it("leaves gitRemote undefined (=> prompt) when the preset omits gitProvider", () => {
+    it("pins all three when the preset provides them", () => {
+      const r = resolvePresetValues(
+        { ...base, gitProvider: "gitlab.com", gitNamespace: "acme", gitRepoName: "site" },
+        NO_OPTS,
+      );
+      expect(r.gitProvider).toBe("gitlab.com");
+      expect(r.gitNamespace).toBe("acme");
+      expect(r.gitRepoName).toBe("site");
+    });
+
+    it("leaves gitProvider undefined (=> full opt-in flow) when the preset omits it", () => {
       const r = resolvePresetValues({ ...base }, NO_OPTS);
-      expect(r.gitRemote).toBeUndefined();
+      expect(r.gitProvider).toBeUndefined();
+      expect(r.gitNamespace).toBeUndefined();
+      expect(r.gitRepoName).toBeUndefined();
     });
   });
 
@@ -154,6 +168,6 @@ describe("resolvePresetValues", () => {
     expect(r.fromPreset).toEqual(["withTower"]);
     expect(r.redaxoAdminEmail).toBeUndefined();
     expect(r.dbHost).toBeUndefined();
-    expect(r.gitRemote).toBeUndefined();
+    expect(r.gitProvider).toBeUndefined();
   });
 });

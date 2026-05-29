@@ -92,7 +92,9 @@ export async function collectConfig(
     submoduleAddons = loaded.config.submoduleAddons;
     templateReplacements = loaded.config.templateReplacements ?? {};
     if (loaded.config.addons) {
-      presetAddons = loaded.config.addons;
+      // loadPreset() runs every entry through normalizePresetAddon, so the
+      // declared PresetAddonInput[] is already concrete AddonSelection[].
+      presetAddons = loaded.config.addons as ViterexConfig["addons"];
     }
     if (loaded.config.installerConfig) {
       installerConfig = path.resolve(loaded.dir, loaded.config.installerConfig);
@@ -438,13 +440,34 @@ export async function collectConfig(
       }
     }
 
-    if (resolved.gitRemote !== undefined) {
-      // Preset specified the remote (empty provider ⇒ no remote). An empty
-      // repo name defaults to the project name, mirroring the interactive prompt.
-      gitProvider = resolved.gitRemote.provider;
-      gitNamespace = resolved.gitRemote.namespace;
-      gitRepoName = resolved.gitRemote.repoName || (projectName as string);
+    if (resolved.gitProvider === "") {
+      // Preset explicitly opted out of a remote — nothing to configure.
+    } else if (resolved.gitProvider !== undefined) {
+      // Preset configures a remote: take the provider (and namespace, if given)
+      // from it and skip those prompts; prompt for whatever it left out. The
+      // repo name is always prompted (default: project name) unless pinned.
+      gitProvider = resolved.gitProvider;
+
+      if (resolved.gitNamespace !== undefined) {
+        gitNamespace = resolved.gitNamespace;
+      } else {
+        const namespace = await p.text({ message: "Organization / username" });
+        if (p.isCancel(namespace)) process.exit(0);
+        gitNamespace = namespace as string;
+      }
+
+      if (resolved.gitRepoName !== undefined) {
+        gitRepoName = resolved.gitRepoName;
+      } else {
+        const repoName = await p.text({
+          message: "Repository name",
+          initialValue: projectName as string,
+        });
+        if (p.isCancel(repoName)) process.exit(0);
+        gitRepoName = repoName as string;
+      }
     } else {
+      // Preset said nothing about a remote — full opt-in flow.
       const setupRemote = await p.confirm({
         message: "Create a remote git repository?",
         initialValue: false,

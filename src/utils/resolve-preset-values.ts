@@ -1,11 +1,5 @@
 import type { CliOptions, PresetConfig, ViterexConfig } from "../types.js";
 
-export interface ResolvedGitRemote {
-  provider: string;
-  namespace: string;
-  repoName: string;
-}
-
 /**
  * Resolution of preset/CLI values for the interactive `--preset` flow.
  *
@@ -34,11 +28,16 @@ export interface ResolvedPresetValues {
   skipGit?: boolean;
   withTower?: boolean;
   /**
-   * Present ⇒ the preset specified the git remote, so skip the remote prompts.
-   * An empty `provider` means "explicitly no remote" (createGitRemote skips on
-   * falsy provider). Undefined ⇒ prompt for a remote as usual.
+   * Git remote, resolved per field:
+   *  - `gitProvider` undefined ⇒ the preset said nothing → run the full opt-in
+   *    remote flow; `""` ⇒ explicitly no remote; non-empty ⇒ configure a remote
+   *    with that provider (skip the "create a remote?" + provider prompts).
+   *  - `gitNamespace` / `gitRepoName` undefined ⇒ prompt for that piece (repo
+   *    name defaults to the project name); else use the preset value.
    */
-  gitRemote?: ResolvedGitRemote;
+  gitProvider?: string;
+  gitNamespace?: string;
+  gitRepoName?: string;
 
   // No prompt — always a final value.
   skipDb: boolean;
@@ -91,18 +90,6 @@ export function resolvePresetValues(
     }
   }
 
-  // Git remote: the preset declaring `gitProvider` (even as "") fully specifies
-  // the remote, so we skip all three remote prompts.
-  let gitRemote: ResolvedGitRemote | undefined;
-  if (preset?.gitProvider !== undefined) {
-    gitRemote = {
-      provider: preset.gitProvider,
-      namespace: preset.gitNamespace ?? "",
-      repoName: preset.gitRepoName ?? "",
-    };
-    fromPreset.push("gitProvider");
-  }
-
   // No-prompt booleans — resolve to a final value, record when preset-sourced.
   const skipDb = options.skipDb ?? preset?.skipDb ?? false;
   if (options.skipDb === undefined && preset?.skipDb !== undefined) fromPreset.push("skipDb");
@@ -135,7 +122,9 @@ export function resolvePresetValues(
     setupDeploy: pick("setupDeploy", undefined, preset?.setupDeploy),
     skipGit: pick("skipGit", options.skipGit, preset?.skipGit),
     withTower: pick("withTower", options.withTower, preset?.withTower),
-    gitRemote,
+    gitProvider: pick("gitProvider", undefined, preset?.gitProvider),
+    gitNamespace: pick("gitNamespace", undefined, preset?.gitNamespace),
+    gitRepoName: pick("gitRepoName", undefined, preset?.gitRepoName),
     skipDb,
     verbose,
     forcePush,

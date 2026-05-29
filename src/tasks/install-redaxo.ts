@@ -61,7 +61,9 @@ export async function installRedaxo(config: ViterexConfig): Promise<void> {
       { verbose },
     );
 
-    if (dbExists.trim() === dbName) {
+    // execa's stdout is a union (and undefined when inherited under --verbose);
+    // coerce to a string before comparing.
+    if (String(dbExists ?? "").trim() === dbName) {
       const backupFile = path.join(projectDir, `backup_${dbName}_${Date.now()}.sql`);
       await exec(
         "mysqldump",
