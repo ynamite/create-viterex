@@ -8,6 +8,10 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+### Added (2026-06-02)
+
+- **`pnpm dev` now diffs ydeploy migrations around the Vite dev server when ydeploy is installed.** A new pipeline task (`src/tasks/patch-dev-script.ts`, "Patch dev script for ydeploy") rewrites the project `package.json` `dev` script from `"vite"` to `"<console> ydeploy:diff && cross-env NODE_ENV=development vite && <console> ydeploy:diff"`, so schema changes made during development surface as migrations both before Vite starts and after it exits. `<console>` is layout-aware (`bin/console` in modern, `redaxo/bin/console` in classic / classic+theme); `cross-env` already ships as a devDependency in `viterex_addon`'s stub `package.json`. "ydeploy installed" is read from disk (the addon's `package.yml`), covering both a fresh install (ydeploy is part of the always-included baseline) and an augmented existing install. The task runs **after** *Apply preset files* (the default preset overwrites the stub `package.json` verbatim, so the patch must land on the final file) and **before** the initial commit. Idempotent and surgical: only the exact stub/preset `"dev": "vite"` value is rewritten, so a re-run or a customised dev script is left untouched. New pure helper `src/utils/patch-dev-script.ts` (unit-tested); ordering locked in `src/__tests__/pipeline-order.test.ts` (task count 18 → 19).
+
 ## [3.0.0-alpha.2] - 2026-06-02
 
 ### Added (2026-06-02)

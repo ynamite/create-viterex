@@ -36,7 +36,15 @@ describe("pipeline task order", () => {
     );
   });
 
-  it("still has 18 tasks", () => {
-    expect(tasks).toHaveLength(18);
+  it("patches the dev script AFTER applying preset files (so it lands on the final package.json)", () => {
+    expect(idx("Apply preset files")).toBeLessThan(idx("Patch dev script for ydeploy"));
+  });
+
+  it("patches the dev script BEFORE the initial commit (so the change is committed)", () => {
+    expect(idx("Patch dev script for ydeploy")).toBeLessThan(idx("Git initial commit"));
+  });
+
+  it("still has 19 tasks", () => {
+    expect(tasks).toHaveLength(19);
   });
 });

@@ -10,6 +10,7 @@ import { installRedaxo } from "./tasks/install-redaxo.js";
 import { installAddons } from "./tasks/install-addons.js";
 import { scaffoldFrontend } from "./tasks/scaffold-frontend.js";
 import { applyPresetFiles } from "./tasks/apply-preset-files.js";
+import { patchDevScript } from "./tasks/patch-dev-script.js";
 import { buildFrontend } from "./tasks/build-frontend.js";
 import { clearCache } from "./tasks/clear-cache.js";
 import { importSql } from "./tasks/import-sql.js";
@@ -76,6 +77,13 @@ export const tasks: Task[] = [
     name: "Apply preset files",
     skip: (c) => !c.presetFilesDir,
     run: applyPresetFiles,
+  },
+  // Must come AFTER "Apply preset files" — the default preset overwrites the
+  // stub package.json verbatim, so the dev-script patch has to land on the
+  // final file. No-ops unless ydeploy is installed (checked on disk).
+  {
+    name: "Patch dev script for ydeploy",
+    run: patchDevScript,
   },
   {
     name: "Seed database",
