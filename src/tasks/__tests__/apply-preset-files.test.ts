@@ -156,4 +156,59 @@ describe("applyPresetFiles", () => {
     expect(await fs.pathExists(path.join(projectDir, "src/assets/css/style.css"))).toBe(true);
     expect(await fs.pathExists(path.join(projectDir, "package.json"))).toBe(false);
   });
+
+  it("merges a top-level .gitignore into the project .gitignore instead of clobbering it", async () => {
+    await fs.outputFile(path.join(projectDir, ".gitignore"), "node_modules\nvendor\n");
+    await fs.outputFile(path.join(presetFilesDir, ".gitignore"), "vendor\n.idea/\n");
+
+    await applyPresetFiles(makeConfig({ presetFilesDir }));
+
+    const gi = await fs.readFile(path.join(projectDir, ".gitignore"), "utf-8");
+    expect(gi).toContain("node_modules"); // existing entry preserved
+    expect(gi).toContain(".idea/"); // preset entry appended
+    expect(gi).toContain("# Added by preset 'test-preset'");
+    // `vendor` already existed → appended once, not duplicated
+    expect(gi.match(/vendor/g)).toHaveLength(1);
+  });
+
+  it("creates the project .gitignore from a preset .gitignore when none exists", async () => {
+    await fs.outputFile(path.join(presetFilesDir, ".gitignore"), "dist/\n.cache/\n");
+
+    await applyPresetFiles(makeConfig({ presetFilesDir }));
+
+    const gi = await fs.readFile(path.join(projectDir, ".gitignore"), "utf-8");
+    expect(gi).toContain("dist/");
+    expect(gi).toContain(".cache/");
+  });
+
+  it("copies a nested .gitignore verbatim (only the top-level one is merged)", async () => {
+    await fs.outputFile(path.join(presetFilesDir, ".gitignore"), "dist/\n");
+    await fs.outputFile(
+      path.join(presetFilesDir, "public/uploads/.gitignore"),
+      "*\n!.gitkeep\n",
+    );
+
+    await applyPresetFiles(makeConfig({ presetFilesDir }));
+
+    // nested .gitignore is copied as-is
+    expect(
+      await fs.readFile(path.join(projectDir, "public/uploads/.gitignore"), "utf-8"),
+    ).toBe("*\n!.gitkeep\n");
+    // top-level .gitignore was merged (carries the header), not verbatim-copied
+    const gi = await fs.readFile(path.join(projectDir, ".gitignore"), "utf-8");
+    expect(gi).toContain("# Added by preset 'test-preset'");
+    expect(gi).toContain("dist/");
+  });
+
+  it("gitignore merge is idempotent — a second run leaves .gitignore byte-identical", async () => {
+    await fs.outputFile(path.join(projectDir, ".gitignore"), "node_modules\n");
+    await fs.outputFile(path.join(presetFilesDir, ".gitignore"), ".idea/\n");
+
+    await applyPresetFiles(makeConfig({ presetFilesDir }));
+    const first = await fs.readFile(path.join(projectDir, ".gitignore"), "utf-8");
+    await applyPresetFiles(makeConfig({ presetFilesDir }));
+    const second = await fs.readFile(path.join(projectDir, ".gitignore"), "utf-8");
+
+    expect(second).toBe(first);
+  });
 });
