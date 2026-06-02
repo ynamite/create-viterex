@@ -32,6 +32,12 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
+      # OIDC Trusted Publishing (token-less publish + provenance auth) requires
+      # npm >= 11.5.1; Node 20 ships npm 10.8.x, which signs provenance but can't
+      # authenticate the publish (registry returns E404). Upgrade before publish.
+      - name: Upgrade npm for Trusted Publishing
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
