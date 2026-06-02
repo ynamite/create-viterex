@@ -8,6 +8,8 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.0.0-alpha.2] - 2026-06-02
+
 ### Added (2026-06-02)
 
 - **A preset can extend the project `.gitignore` instead of clobbering it.** A **top-level** `.gitignore` in a preset's `filesDir` is now append-merged into the project `.gitignore` (only the missing patterns, under an `# Added by preset '<name>'` header, idempotent) rather than copied verbatim — mirroring the `package-deps.json` → `package.json` merge. The baseline `.gitignore` is owned by `viterex_addon` (`stubs/.gitignore.example`, merged during `viterex:install-stubs`); the preset now layers on top of it. Nested per-directory `.gitignore` files still copy verbatim (full-path check, not basename). New pure helper `src/utils/merge-gitignore.ts` (mirrors `viterex_addon`'s `StubsInstaller::mergeGitignore`); wired into `src/tasks/apply-preset-files.ts`. For ignores that apply to every project, add them to `viterex_addon`'s `stubs/.gitignore.example` instead.
