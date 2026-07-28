@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "setup-https": "mkcert -install && mkcert localhost 127.0.0.1 ::1",
     "format": "biome format --write && prettier --write \"**/*.{html,css,scss}\"",
-    "lint": "biome check && stylelint \"**/*.{css,scss}\""
+    "lint": "biome check && stylelint \"**/*.{css,scss}\"",
+    "deploy": ".tools/bin/dep deploy"
   },
   "dependencies": {
     "alpinejs": "^3.14.0",

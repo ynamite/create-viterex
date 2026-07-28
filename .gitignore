@@ -25,6 +25,11 @@ presets/massif/*
 /var/log/*
 
 # Editor directories and files
+.env
+.env.local
+.env.*.local
+.vite-hot
+.vite-reload-trigger
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
@@ -36,6 +41,7 @@ presets/massif/*
 !.yarn/releases
 .npmrc
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj

@@ -24,12 +24,41 @@ $deploymentRepository = 'git@github.com:user/repo.git';
 // es muss nicht zwingend ein Git-Repository verwendet werden; dieses Skript prueft, ob ein Git-Repository initialisiert wurde.
 // ohne Git-Repository muss ggf. der `deploy:update_code`-Task in dieser Datei angepasst werden (ab Zeile 105)
 
+// es muss nicht zwingend ein Git-Repository verwendet werden; dieses Skript prueft, ob ein Git-Repository initialisiert wurde.
+// ohne Git-Repository muss ggf. der `deploy:update_code`-Task in dieser Datei angepasst werden (ab Zeile 105)
+
+$removeOnRelease = [
+    'docs',
+    'public/dist/assets/img/.gitkeep',
+    '.browserslistrc',
+    '.env',
+    '.env.local',
+    '.prettierrc',
+    '.vite-reload-trigger',
+    'biome.jsonc',
+    'CLAUDE.md',
+    'composer.json',
+    'composer.lock',
+    'deploy.php',
+    'deployer.task.release.metanet.php',
+    'deployer.task.setup.php',
+    'jsconfig.json',
+    'localhost+2-key.pem',
+    'localhost+2.pem',
+    'LocalValetDriver.php',
+    'package.json',
+    'pnpm-lock.yaml',
+    'stylelint.config.js',
+    'tailwind.config.js',
+    'vite.config.js',
+    '.yarn',
+];
+
 // -------------------------------------------------
 
 require __DIR__ . '/src/addons/ydeploy/deploy_yak.php';
 require __DIR__ . '/deployer.task.setup.php';
-{{DEPLOYER_EXTRAS}}
-
+require __DIR__ . '/deployer.task.release.metanet.php';
 
 $isGit = is_dir(__DIR__ . '/.git');
 
@@ -40,40 +69,50 @@ set(
     }
 );
 
+set('assets_install', static function () {
+    if (!test('[ -f {{release_path}}/package.json ]')) {
+        return false;
+    }
+    if (commandExist('pnpm')) {
+        return 'pnpm install';
+    }
+    if (commandExist('yarn')) {
+        return 'yarn install';
+    }
+    if (commandExist('npm')) {
+        return 'npm install';
+    }
+
+    return false;
+});
+
+set('assets_build', static function () {
+    if (!get('assets_install')) {
+        return false;
+    }
+
+    if (!test('[ -f {{release_path}}/webpack.config.js ]') && test('[ -d {{release_path}}/gulpfile.js ]')) {
+        return 'APP_ENV=prod node_modules/.bin/gulp build';
+    }
+
+    if (commandExist('pnpm')) {
+        return 'pnpm build';
+    }
+    if (commandExist('yarn')) {
+        return 'yarn build';
+    }
+    if (commandExist('npm')) {
+        return 'npm run build';
+    }
+
+    return false;
+});
+
 add('shared_dirs', [
     '{{data_dir}}/addons/statistics'
 ]);
 
-add('clear_paths', [
-    'assets',
-    'public/dist/assets/img/.gitkeep',
-    '.env.local',
-    'deployer.task.setup.php',
-    'stylelint.config.js',
-    'tailwind.config.js',
-    'vite.config.js',
-    'index.js',
-    '.yarn',
-    '.prettierrc',
-    'jsconfig.json',
-    '.browserslistrc',
-    'LocalValetDriver.php',
-    'composer.json',
-    'composer.lock',
-    '.eslintrc.cjs',
-    '.browserlistrc',
-    'localhost+2-key.pem',
-    'localhost+2.pem',
-    'deploy.php',
-{{DEPLOYER_EXTRAS_CLEAR_PATHS}}
-    'quickstart',
-    'sync-config',
-    'sync-db',
-    'sync-media',
-    'CriticalCSS.js',
-    'CriticalPrepare.js',
-    'CriticalCSSdebug.js',
-]);
+add('clear_paths', $removeOnRelease);
 
 set('update_code_strategy', 'clone');
 
@@ -89,9 +128,10 @@ task('build:vendors', static function () {
             }
             run('cp .env.local {{release_path}}');
             run('cp .env.local {{release_path}}/.env');
-            run('cp localhost+2-key.pem {{release_path}}');
-            run('cp localhost+2.pem {{release_path}}');
-
+            if (test('[ -f localhost+2-key.pem ]') && test('[ -f localhost+2.pem ]')) {
+                run('cp localhost+2-key.pem {{release_path}}');
+                run('cp localhost+2.pem {{release_path}}');
+            }
             // install Git submodules if they exist
             if (test('[ -f {{release_path}}/.gitmodules ]')) {
                 info('Installing Git submodules');
@@ -139,7 +179,6 @@ before('deploy:success', function () {
     );
 });
 
-
 // Hosts
 host($deploymentName)
     ->setHostname($deploymentHost)
@@ -155,7 +194,6 @@ host($deploymentName)
     )
     ->setDeployPath($deploymentPath);
 
-
 if ($isGit) {
     set('repository', $deploymentRepository);
     set('branch', static fn() => runLocally('{{bin/git}} rev-parse --abbrev-ref HEAD'));
@@ -166,20 +204,11 @@ if ($isGit) {
     task('deploy:update_code', function () {
         foreach (
             [
-                'assets',
                 'bin',
                 'public',
                 'src',
                 'var',
-                '.env.local',
-                'package.json',
-                'stylelint.config.js',
-                'tailwind.config.js',
-                'vite.config.js',
-                'index.js',
-                'yarn.lock',
                 'LICENSE.md',
-                'README.md',
             ] as $src
         ) {
             upload($src, '{{release_path}}/', ['options' => ['--recursive', '--relative']]);
