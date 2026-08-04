@@ -48,5 +48,5 @@
     "scaffold"
   ],
   "license": "MIT",
-  "packageManager": "pnpm@11.13.0"
+  "packageManager": "pnpm@11.20.0"
 }
