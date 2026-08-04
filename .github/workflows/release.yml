@@ -22,9 +22,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # pnpm version comes from package.json's packageManager field
       - uses: pnpm/action-setup@v6
-        with:
-          version: 9
 
       - uses: actions/setup-node@v6
         with:

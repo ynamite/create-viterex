@@ -1,6 +1,7 @@
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import type { Layout, InstallMode } from "../types.js";
+import { pathExists } from "./fs.js";
 
 export interface DetectionResult {
   mode: InstallMode;
@@ -33,7 +34,7 @@ export function srcAddonsDirFor(layout: Layout): string {
  */
 export async function isSetupComplete(targetDir: string, layout: Layout): Promise<boolean> {
   const configPath = path.join(targetDir, dataDirFor(layout), "core", "config.yml");
-  if (!(await fs.pathExists(configPath))) return false;
+  if (!(await pathExists(configPath))) return false;
   const content = await fs.readFile(configPath, "utf-8");
   return /^setup:\s*true\s*$/m.test(content);
 }
@@ -44,13 +45,13 @@ export async function isSetupComplete(targetDir: string, layout: Layout): Promis
  */
 async function listInstalledAddons(targetDir: string, layout: Layout): Promise<string[]> {
   const addonsRoot = path.join(targetDir, srcAddonsDirFor(layout));
-  if (!(await fs.pathExists(addonsRoot))) return [];
+  if (!(await pathExists(addonsRoot))) return [];
 
   const entries = await fs.readdir(addonsRoot, { withFileTypes: true });
   const keys: string[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    if (await fs.pathExists(path.join(addonsRoot, entry.name, "package.yml"))) {
+    if (await pathExists(path.join(addonsRoot, entry.name, "package.yml"))) {
       keys.push(entry.name);
     }
   }
@@ -66,7 +67,7 @@ async function listInstalledAddons(targetDir: string, layout: Layout): Promise<s
  * - otherwise: fresh install (mode='fresh', layout defaults to 'modern')
  */
 export async function detectInstallation(targetDir: string): Promise<DetectionResult> {
-  const exists = (p: string) => fs.pathExists(path.join(targetDir, p));
+  const exists = (p: string) => pathExists(path.join(targetDir, p));
 
   const hasModern = (await exists("bin/console")) && (await exists("src/path_provider.php"));
   const hasClassic = (await exists("redaxo/bin/console")) && !(await exists("src/path_provider.php"));

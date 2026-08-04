@@ -8,6 +8,18 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-08-04
+
+### Changed
+
+- **Node `>=22` is now required** (`engines` was `>=18`; Node 18 and 20 are EOL). Needed for `util.styleText` and stable `fs.cp`.
+- **Four dependencies dropped, replaced by Node stdlib** (−189 lines net): `ora` (unused — the pipeline uses `@clack/prompts`' spinner), `chalk` (→ `util.styleText`), `fs-extra` + `@types/fs-extra` (→ `node:fs/promises`, with a minimal `src/utils/fs.ts` providing `pathExists`/`readJSON`/`writeJSON`). Runtime deps are now just `@clack/prompts`, `commander`, `execa`.
+- `getLatestRedaxoVersion` now uses global `fetch` (native redirect handling + `AbortSignal.timeout`) instead of hand-rolled `node:https`.
+
+### Fixed
+
+- **CI workflow no longer fails at the pnpm cache step** (`ERROR packages field missing or empty`). Local dev on pnpm 11 wrote pnpm-11-style config (`allowBuilds`) into `pnpm-workspace.yaml`, which the workflows' pinned pnpm 9 rejects. The pnpm version is now pinned once via package.json's `packageManager` field (`pnpm@11.13.0`) and both workflows let `pnpm/action-setup` read it. CI also runs Node 24 (was 20) to match `engines`.
+
 ## [3.0.1] - 2026-08-04
 
 ### Fixed

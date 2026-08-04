@@ -1,8 +1,10 @@
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import * as p from "@clack/prompts";
 import type { ViterexConfig } from "./types.js";
 import { loadPreset, resolveSeedFile } from "./preset.js";
+import { pathExists, readJSON, writeJSON } from "./utils/fs.js";
+import { backfillConfigDefaults } from "./utils/load-config.js";
 
 const STATE_FILE = ".viterex-state.json";
 
@@ -48,7 +50,7 @@ export async function loadState(
   }
 
   if (options.config) {
-    const cfg = (await fs.readJSON(options.config as string)) as { projectDir?: string };
+    const cfg = await readJSON<{ projectDir?: string }>(options.config as string);
     if (!cfg.projectDir) {
       throw new Error(
         `--resume --config requires the config file to have a "projectDir" field.`,
@@ -68,14 +70,14 @@ async function loadStateFromDir(
 ): Promise<StateData> {
   const statePath = resolveStatePath(projectDir);
 
-  if (!(await fs.pathExists(statePath))) {
+  if (!(await pathExists(statePath))) {
     throw new Error(
       `No state file found at ${statePath}. Cannot resume — run without --resume to start fresh.`,
     );
   }
 
-  const raw: Record<string, unknown> = await fs.readJSON(statePath);
-  const rawConfig = raw.config as Record<string, unknown>;
+  const raw = await readJSON<Record<string, unknown>>(statePath);
+  const rawConfig = raw.config as Partial<ViterexConfig> & Record<string, unknown>;
 
   // Migrate old massifSettings → templateReplacements
   if (rawConfig.massifSettings && !rawConfig.templateReplacements) {
@@ -90,12 +92,7 @@ async function loadStateFromDir(
   }
 
   // Backfill defaults for fields added in newer installer versions
-  if (!rawConfig.templateReplacements) rawConfig.templateReplacements = {};
-  if (!rawConfig.preset) rawConfig.preset = "custom";
-  if (!rawConfig.layout) rawConfig.layout = "modern";
-  if (!rawConfig.installMode) rawConfig.installMode = "fresh";
-  if (!rawConfig.redaxoLang) rawConfig.redaxoLang = "de_de";
-  if (!rawConfig.redaxoTimezone) rawConfig.redaxoTimezone = "Europe/Berlin";
+  backfillConfigDefaults(rawConfig, "modern");
 
   const data = raw as unknown as StateData;
 
@@ -147,7 +144,7 @@ async function rederivePackageResolvedPaths(config: ViterexConfig): Promise<void
 
   const filesDirName = loaded.config.filesDir ?? "files";
   const filesDirPath = path.resolve(loaded.dir, filesDirName);
-  if (await fs.pathExists(filesDirPath)) {
+  if (await pathExists(filesDirPath)) {
     config.presetFilesDir = filesDirPath;
   }
 }
@@ -163,7 +160,7 @@ export async function saveState(
   completedTasks: string[]
 ): Promise<void> {
   const statePath = resolveStatePath(config.projectDir);
-  await fs.ensureDir(path.dirname(statePath));
+  await fs.mkdir(path.dirname(statePath), { recursive: true });
 
   const persisted: Record<string, unknown> = { ...config };
   for (const key of PACKAGE_RESOLVED_FIELDS) {
@@ -171,7 +168,7 @@ export async function saveState(
   }
 
   const data = { config: persisted, completedTasks };
-  await fs.writeJSON(statePath, data, { spaces: 2 });
+  await writeJSON(statePath, data);
 }
 
 /**
@@ -180,5 +177,5 @@ export async function saveState(
  */
 export async function clearState(projectDir: string): Promise<void> {
   const statePath = resolveStatePath(projectDir);
-  await fs.remove(statePath);
+  await fs.rm(statePath, { recursive: true, force: true });
 }

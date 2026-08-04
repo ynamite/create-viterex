@@ -1,6 +1,7 @@
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import * as p from "@clack/prompts";
+import { pathExists, readJSON, writeJSON } from "../utils/fs.js";
 import type { ViterexConfig } from "../types.js";
 
 const DEPLOYER_REQUIREMENT = "^7.5";
@@ -18,11 +19,11 @@ const DEPLOYER_REQUIREMENT = "^7.5";
  */
 export async function configureComposer(config: ViterexConfig): Promise<void> {
   const composerPath = path.join(config.projectDir, "composer.json");
-  await fs.ensureDir(config.projectDir);
+  await fs.mkdir(config.projectDir, { recursive: true });
 
   let manifest: Record<string, unknown> = {};
-  if (await fs.pathExists(composerPath)) {
-    manifest = await fs.readJSON(composerPath);
+  if (await pathExists(composerPath)) {
+    manifest = await readJSON<Record<string, unknown>>(composerPath);
   }
 
   const cfg = ((manifest.config ?? {}) as Record<string, unknown>);
@@ -43,5 +44,5 @@ export async function configureComposer(config: ViterexConfig): Promise<void> {
   }
   manifest.require = require;
 
-  await fs.writeJSON(composerPath, manifest, { spaces: 2 });
+  await writeJSON(composerPath, manifest);
 }

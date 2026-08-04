@@ -1,5 +1,5 @@
 import path from "node:path";
-import fs from "fs-extra";
+import { pathExists } from "../utils/fs.js";
 import { exec } from "../utils/exec.js";
 import { consolePathFor, srcAddonsDirFor } from "../utils/detect.js";
 import type { ViterexConfig } from "../types.js";
@@ -21,7 +21,7 @@ export async function installAddons(config: ViterexConfig): Promise<void> {
 
     if (!isPlugin && addon.install) {
       const addonDir = path.join(projectDir, addonsDir, addon.key);
-      if (!(await fs.pathExists(addonDir))) {
+      if (!(await pathExists(addonDir))) {
         const downloadArgs = [
           consolePath,
           "install:download",

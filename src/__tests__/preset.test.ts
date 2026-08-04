@@ -1,8 +1,9 @@
 import os from "node:os";
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadPreset } from "../preset.js";
+import { pathExists, writeJSON } from "../utils/fs.js";
 
 let tmpDir: string;
 
@@ -11,12 +12,12 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await fs.remove(tmpDir);
+  await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
 describe("loadPreset — path resolution", () => {
   it("loads a preset when given a directory path", async () => {
-    await fs.writeJSON(path.join(tmpDir, "preset.json"), {
+    await writeJSON(path.join(tmpDir, "preset.json"), {
       name: "fixture",
       description: "test fixture",
       addons: [],
@@ -31,7 +32,7 @@ describe("loadPreset — path resolution", () => {
 
   it("loads a preset when given a path to preset.json", async () => {
     const file = path.join(tmpDir, "preset.json");
-    await fs.writeJSON(file, {
+    await writeJSON(file, {
       name: "fixture",
       description: "test fixture",
       addons: [],
@@ -46,7 +47,7 @@ describe("loadPreset — path resolution", () => {
 
   it("returns dir pointing at the preset folder so relative paths resolve correctly", async () => {
     // Create a preset with a relative seedFile so we can verify dir is correct.
-    await fs.writeJSON(path.join(tmpDir, "preset.json"), {
+    await writeJSON(path.join(tmpDir, "preset.json"), {
       name: "fixture",
       description: "test fixture",
       seedFile: "seed.sql.tpl",
@@ -60,7 +61,7 @@ describe("loadPreset — path resolution", () => {
     // installerConfig, deployerExtras. It must be tmpDir, not its parent.
     expect(result?.dir).toBe(tmpDir);
     expect(
-      await fs.pathExists(path.join(result!.dir, result!.config.seedFile!)),
+      await pathExists(path.join(result!.dir, result!.config.seedFile!)),
     ).toBe(true);
   });
 
@@ -69,7 +70,7 @@ describe("loadPreset — path resolution", () => {
   });
 
   it("passes through the installer fields added to PresetConfig", async () => {
-    await fs.writeJSON(path.join(tmpDir, "preset.json"), {
+    await writeJSON(path.join(tmpDir, "preset.json"), {
       name: "fixture",
       description: "test fixture",
       redaxoAdminEmail: "studio@massif.ch",

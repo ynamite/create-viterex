@@ -1,7 +1,8 @@
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import { exec } from "../utils/exec.js";
 import { consolePathFor } from "../utils/detect.js";
+import { pathExists } from "../utils/fs.js";
 import type { ViterexConfig } from "../types.js";
 
 /**
@@ -15,7 +16,7 @@ export async function addSubmoduleAddons(config: ViterexConfig): Promise<void> {
   if (!submoduleAddons?.length) return;
 
   const gitmodulesPath = path.join(projectDir, ".gitmodules");
-  const existing = (await fs.pathExists(gitmodulesPath))
+  const existing = (await pathExists(gitmodulesPath))
     ? await fs.readFile(gitmodulesPath, "utf-8")
     : "";
 

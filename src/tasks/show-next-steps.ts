@@ -1,6 +1,6 @@
 import path from "node:path";
+import { styleText } from "node:util";
 import * as p from "@clack/prompts";
-import chalk from "chalk";
 import type { ViterexConfig } from "../types.js";
 
 /**
@@ -23,6 +23,6 @@ export async function showNextSteps(config: ViterexConfig): Promise<void> {
       : "";
 
   p.log.success(
-    `Next step — start the Vite dev server:\n\n${cdLine}  ${chalk.bold.magentaBright(`${packageManager} run dev`)}\n`,
+    `Next step — start the Vite dev server:\n\n${cdLine}  ${styleText(["bold", "magentaBright"], `${packageManager} run dev`)}\n`,
   );
 }

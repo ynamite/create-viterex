@@ -1,7 +1,8 @@
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import * as p from "@clack/prompts";
 import { consolePathFor, srcAddonsDirFor } from "../utils/detect.js";
+import { pathExists, readJSON } from "../utils/fs.js";
 import { patchDevScriptForYdeploy } from "../utils/patch-dev-script.js";
 import type { ViterexConfig } from "../types.js";
 
@@ -32,15 +33,15 @@ export async function patchDevScript(config: ViterexConfig): Promise<void> {
     "ydeploy",
     "package.yml",
   );
-  if (!(await fs.pathExists(ydeployManifest))) {
+  if (!(await pathExists(ydeployManifest))) {
     if (verbose) p.log.info("ydeploy not installed — leaving dev script unchanged.");
     return;
   }
 
   const pkgPath = path.join(projectDir, "package.json");
-  if (!(await fs.pathExists(pkgPath))) return;
+  if (!(await pathExists(pkgPath))) return;
 
-  const pkg = (await fs.readJSON(pkgPath)) as Record<string, unknown>;
+  const pkg = await readJSON<Record<string, unknown>>(pkgPath);
   const { pkg: patched, changed } = patchDevScriptForYdeploy(pkg, consolePathFor(layout));
 
   if (changed) {

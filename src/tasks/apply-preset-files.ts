@@ -1,8 +1,9 @@
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import * as p from "@clack/prompts";
 import { mergePackageDeps, type PackageDeps } from "../utils/merge-package-deps.js";
 import { mergeGitignore } from "../utils/merge-gitignore.js";
+import { pathExists, readJSON } from "../utils/fs.js";
 import type { ViterexConfig } from "../types.js";
 
 /**
@@ -43,8 +44,8 @@ export async function applyPresetFiles(config: ViterexConfig): Promise<void> {
   // the project .gitignore below). Nested per-directory .gitignore files still
   // copy normally — hence the full-path check rather than a basename match.
   const presetGitignore = path.join(presetFilesDir, ".gitignore");
-  await fs.copy(presetFilesDir, projectDir, {
-    overwrite: true,
+  await fs.cp(presetFilesDir, projectDir, {
+    recursive: true,
     filter: (src) => {
       const base = path.basename(src);
       if (base === ".DS_Store" || base === "package-deps.json") return false;
@@ -57,10 +58,10 @@ export async function applyPresetFiles(config: ViterexConfig): Promise<void> {
   const depsPath = path.join(presetFilesDir, "package-deps.json");
   const pkgPath = path.join(projectDir, "package.json");
   let depsNote = "";
-  if (await fs.pathExists(depsPath)) {
-    if (await fs.pathExists(pkgPath)) {
-      const incoming = (await fs.readJSON(depsPath)) as PackageDeps;
-      const pkg = (await fs.readJSON(pkgPath)) as Record<string, unknown>;
+  if (await pathExists(depsPath)) {
+    if (await pathExists(pkgPath)) {
+      const incoming = await readJSON<PackageDeps>(depsPath);
+      const pkg = await readJSON<Record<string, unknown>>(pkgPath);
       const { pkg: merged, added } = mergePackageDeps(pkg, incoming);
       if (added > 0) {
         await fs.writeFile(pkgPath, `${JSON.stringify(merged, null, 2)}\n`);
@@ -77,10 +78,10 @@ export async function applyPresetFiles(config: ViterexConfig): Promise<void> {
   // (append only the missing patterns) rather than clobbering viterex_addon's
   // baseline. Creates the file when the project has none yet.
   let gitignoreNote = "";
-  if (await fs.pathExists(presetGitignore)) {
+  if (await pathExists(presetGitignore)) {
     const incoming = await fs.readFile(presetGitignore, "utf-8");
     const projectGitignore = path.join(projectDir, ".gitignore");
-    const existing = (await fs.pathExists(projectGitignore))
+    const existing = (await pathExists(projectGitignore))
       ? await fs.readFile(projectGitignore, "utf-8")
       : "";
     const { content, added } = mergeGitignore(

@@ -1,8 +1,9 @@
 import os from "node:os";
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfigFile } from "../load-config.js";
+import { writeJSON } from "../fs.js";
 
 let tmpDir: string;
 
@@ -11,7 +12,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await fs.remove(tmpDir);
+  await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
 describe("loadConfigFile — path resolution", () => {
@@ -23,7 +24,7 @@ describe("loadConfigFile — path resolution", () => {
 
   it("loads from a JSON file path", async () => {
     const file = path.join(tmpDir, "viterex.json");
-    await fs.writeJSON(file, minimalConfig);
+    await writeJSON(file, minimalConfig);
 
     const result = await loadConfigFile(file, "modern");
 
@@ -32,7 +33,7 @@ describe("loadConfigFile — path resolution", () => {
   });
 
   it("loads from a directory path containing viterex.json", async () => {
-    await fs.writeJSON(path.join(tmpDir, "viterex.json"), minimalConfig);
+    await writeJSON(path.join(tmpDir, "viterex.json"), minimalConfig);
 
     const result = await loadConfigFile(tmpDir, "modern");
 
@@ -41,7 +42,7 @@ describe("loadConfigFile — path resolution", () => {
   });
 
   it("backfills missing fields", async () => {
-    await fs.writeJSON(path.join(tmpDir, "viterex.json"), minimalConfig);
+    await writeJSON(path.join(tmpDir, "viterex.json"), minimalConfig);
 
     const result = await loadConfigFile(tmpDir, "classic");
 

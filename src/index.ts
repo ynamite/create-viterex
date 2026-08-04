@@ -1,19 +1,22 @@
+import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import fs from "fs-extra";
-import chalk from "chalk";
+import { styleText } from "node:util";
 import { Command } from "commander";
 import { collectConfig } from "./prompts.js";
 import { runPipeline } from "./pipeline.js";
 import { loadState, clearState } from "./state.js";
 import { detectInstallation } from "./utils/detect.js";
+import { pathExists, writeJSON } from "./utils/fs.js";
 import { loadConfigFile } from "./utils/load-config.js";
 import { printBanner, printSuccess, printError } from "./utils/log.js";
 import type { ViterexConfig } from "./types.js";
 
 const pkgVersion = (() => {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return fs.readJsonSync(path.join(here, "..", "package.json")).version as string;
+  return (JSON.parse(readFileSync(path.join(here, "..", "package.json"), "utf-8")) as {
+    version: string;
+  }).version;
 })();
 
 const program = new Command();
@@ -45,8 +48,8 @@ program
 
     if (/-(alpha|beta|rc)/.test(pkgVersion)) {
       console.log(
-        chalk.yellow(`⚠ This is a ${pkgVersion} pre-release.`) +
-          chalk.dim(` Report issues at https://github.com/ynamite/viterex/issues`)
+        styleText("yellow", `⚠ This is a ${pkgVersion} pre-release.`) +
+          styleText("dim", ` Report issues at https://github.com/ynamite/viterex/issues`)
       );
       console.log("");
     }
@@ -55,14 +58,14 @@ program
       // --generate-config: run prompts, write JSON, exit. Never enters the pipeline.
       if (options.generateConfig) {
         if (options.config) {
-          console.warn(chalk.yellow("--config is ignored when --generate-config is set"));
+          console.warn(styleText("yellow", "--config is ignored when --generate-config is set"));
         }
         const targetPath = path.resolve(
           typeof options.generateConfig === "string"
             ? options.generateConfig
             : "viterex.json",
         );
-        if ((await fs.pathExists(targetPath)) && !options.force) {
+        if ((await pathExists(targetPath)) && !options.force) {
           throw new Error(
             `${targetPath} already exists. Re-run with --force to overwrite.`,
           );
@@ -77,10 +80,11 @@ program
         const generated = await collectConfig(projectName, options, detection);
         // Strip runtime-only fields the user shouldn't pin in a config file.
         const { verbose: _v, forcePush: _fp, withTower: _wt, ...persisted } = generated;
-        await fs.writeJSON(targetPath, persisted, { spaces: 2 });
+        await writeJSON(targetPath, persisted);
 
         console.log(
-          chalk.green(
+          styleText(
+            "green",
             `\n✓ Wrote ${targetPath} — re-run with --config ${JSON.stringify(targetPath)} to install.\n`,
           ),
         );
@@ -134,9 +138,9 @@ function resolveTargetDir(projectName: string | undefined, configPath: string | 
     try {
       const resolved = path.resolve(configPath);
       let isDir = false;
-      try { isDir = fs.statSync(resolved).isDirectory(); } catch { /* missing path */ }
+      try { isDir = statSync(resolved).isDirectory(); } catch { /* missing path */ }
       const file = isDir ? path.join(resolved, "viterex.json") : resolved;
-      const cfg = fs.readJSONSync(file) as { projectDir?: string };
+      const cfg = JSON.parse(readFileSync(file, "utf-8")) as { projectDir?: string };
       if (cfg.projectDir) return path.resolve(cfg.projectDir);
     } catch {
       // fall through to cwd
@@ -144,4 +148,3 @@ function resolveTargetDir(projectName: string | undefined, configPath: string | 
   }
   return process.cwd();
 }
-

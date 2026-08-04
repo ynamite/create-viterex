@@ -1,6 +1,7 @@
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import { exec } from "../utils/exec.js";
+import { pathExists } from "../utils/fs.js";
 import type { ViterexConfig } from "../types.js";
 
 const SAFETY_IGNORES = [
@@ -14,12 +15,12 @@ const SAFETY_IGNORES = [
 export async function initGitRepo(config: ViterexConfig): Promise<void> {
   const { projectDir, verbose } = config;
 
-  if (!(await fs.pathExists(path.join(projectDir, ".git")))) {
+  if (!(await pathExists(path.join(projectDir, ".git")))) {
     await exec("git", ["init"], { cwd: projectDir, verbose });
   }
 
   const gitignorePath = path.join(projectDir, ".gitignore");
-  if (await fs.pathExists(gitignorePath)) {
+  if (await pathExists(gitignorePath)) {
     const existing = await fs.readFile(gitignorePath, "utf-8");
     const missing = SAFETY_IGNORES.filter((entry) => !existing.includes(entry));
     if (missing.length > 0) {
@@ -45,7 +46,7 @@ export async function gitInitialCommit(config: ViterexConfig): Promise<void> {
 
   // Ensure the layout-specific console binary is tracked with +x.
   const consoleRel = layout === "modern" ? "bin/console" : "redaxo/bin/console";
-  if (await fs.pathExists(path.join(projectDir, consoleRel))) {
+  if (await pathExists(path.join(projectDir, consoleRel))) {
     try {
       await exec("git", ["update-index", "--chmod=+x", consoleRel], { cwd: projectDir, verbose });
     } catch {

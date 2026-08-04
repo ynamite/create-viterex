@@ -1,9 +1,10 @@
 import os from "node:os";
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadState, saveState } from "../state.js";
 import type { ViterexConfig } from "../types.js";
+import { readJSON, writeJSON } from "../utils/fs.js";
 
 let tmpDir: string;
 
@@ -12,14 +13,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await fs.remove(tmpDir);
+  await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
 describe("loadState — older state-file migration", () => {
   it("backfills layout / installMode / redaxoLang / redaxoTimezone when absent", async () => {
     const stateFile = path.join(tmpDir, ".viterex-state.json");
     // An old state file that pre-dates the v3 layout-detection / lang fields.
-    await fs.writeJSON(stateFile, {
+    await writeJSON(stateFile, {
       config: {
         projectName: "legacy",
         projectDir: tmpDir,
@@ -106,9 +107,9 @@ describe("loadState — older state-file migration", () => {
     await saveState(config, ["task-a"]);
 
     // On disk: the stale paths must be gone.
-    const onDisk = (await fs.readJSON(path.join(tmpDir, ".viterex-state.json"))) as {
+    const onDisk = await readJSON<{
       config: Record<string, unknown>;
-    };
+    }>(path.join(tmpDir, ".viterex-state.json"));
     expect(onDisk.config.presetDir).toBeUndefined();
     expect(onDisk.config.presetFilesDir).toBeUndefined();
     expect(onDisk.config.seedFile).toBeUndefined();
@@ -134,7 +135,7 @@ describe("loadState — older state-file migration", () => {
 
   it("leaves package-resolved paths unset when preset is 'custom'", async () => {
     const stateFile = path.join(tmpDir, ".viterex-state.json");
-    await fs.writeJSON(stateFile, {
+    await writeJSON(stateFile, {
       config: {
         projectDir: tmpDir,
         preset: "custom",
@@ -152,7 +153,7 @@ describe("loadState — older state-file migration", () => {
 
   it("warns and continues when the persisted preset can no longer be resolved", async () => {
     const stateFile = path.join(tmpDir, ".viterex-state.json");
-    await fs.writeJSON(stateFile, {
+    await writeJSON(stateFile, {
       config: {
         projectDir: tmpDir,
         preset: "this-preset-does-not-exist-anywhere",
@@ -171,7 +172,7 @@ describe("loadState — older state-file migration", () => {
 
   it("migrates legacy massifSettings into templateReplacements", async () => {
     const stateFile = path.join(tmpDir, ".viterex-state.json");
-    await fs.writeJSON(stateFile, {
+    await writeJSON(stateFile, {
       config: {
         projectDir: tmpDir,
         massifSettings: {

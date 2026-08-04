@@ -1,7 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import { dataDirFor, srcAddonsDirFor } from "../utils/detect.js";
+import { pathExists, writeJSON } from "../utils/fs.js";
 import { replacePlaceholders } from "../utils/replace-placeholders.js";
 import type { ViterexConfig } from "../types.js";
 
@@ -13,14 +14,14 @@ async function processTemplate(
   destPath: string,
   replacements: Record<string, string>,
 ): Promise<void> {
-  if (!(await fs.pathExists(tplPath))) return;
+  if (!(await pathExists(tplPath))) return;
   const content = await fs.readFile(tplPath, "utf-8");
   await fs.writeFile(destPath, replacePlaceholders(content, replacements));
 }
 
 async function copyTemplate(srcPath: string, destPath: string): Promise<void> {
-  if (!(await fs.pathExists(srcPath))) return;
-  await fs.copy(srcPath, destPath, { overwrite: false });
+  if (!(await pathExists(srcPath))) return;
+  await fs.cp(srcPath, destPath, { recursive: true, force: false });
 }
 
 export async function scaffoldFrontend(config: ViterexConfig): Promise<void> {
@@ -47,8 +48,8 @@ export async function scaffoldFrontend(config: ViterexConfig): Promise<void> {
 
   // ─── 1. Base static files ──────────────────────────────────────────
   const baseDir = path.join(templatesDir, "base");
-  if (await fs.pathExists(baseDir)) {
-    await fs.copy(baseDir, projectDir, { overwrite: false });
+  if (await pathExists(baseDir)) {
+    await fs.cp(baseDir, projectDir, { recursive: true, force: false });
   }
 
   // ─── 2. Templated root configs ─────────────────────────────────────
@@ -69,7 +70,7 @@ export async function scaffoldFrontend(config: ViterexConfig): Promise<void> {
   const dataDir = path.join(projectDir, dataDirFor(layout));
   const addonsDir = path.join(projectDir, srcAddonsDirFor(layout));
 
-  await fs.ensureDir(path.join(dataDir, "addons", "install"));
+  await fs.mkdir(path.join(dataDir, "addons", "install"), { recursive: true });
 
   // REDAXO Installer API credentials:
   //   1. preset supplies a config file → copy it
@@ -77,20 +78,19 @@ export async function scaffoldFrontend(config: ViterexConfig): Promise<void> {
   //   3. neither → no installer config installed (Redaxo handles its absence)
   const installerConfigPath = path.join(dataDir, "addons", "install", "config.json");
   if (config.installerConfig) {
-    await fs.copy(config.installerConfig, installerConfigPath, { overwrite: false });
+    await fs.cp(config.installerConfig, installerConfigPath, { recursive: true, force: false });
   } else if (config.installerApiLogin && config.installerApiKey) {
-    await fs.writeJSON(
+    await writeJSON(
       installerConfigPath,
       {
         backups: true,
         api_login: config.installerApiLogin,
         api_key: config.installerApiKey,
       },
-      { spaces: 2 },
     );
   }
 
-  await fs.ensureDir(path.join(dataDir, "addons", "ydeploy"));
+  await fs.mkdir(path.join(dataDir, "addons", "ydeploy"), { recursive: true });
 
   if (config.seedFile) {
     await processTemplate(
@@ -100,7 +100,7 @@ export async function scaffoldFrontend(config: ViterexConfig): Promise<void> {
     );
   }
 
-  await fs.ensureDir(path.join(addonsDir, "project", "fragments"));
+  await fs.mkdir(path.join(addonsDir, "project", "fragments"), { recursive: true });
 
   // ─── 4. Deploy files (conditional) ────────────────────────────────
   if (setupDeploy) {
@@ -109,10 +109,10 @@ export async function scaffoldFrontend(config: ViterexConfig): Promise<void> {
 
     // Copy preset-supplied extras to project root.
     for (const absPath of extras) {
-      await fs.copy(
+      await fs.cp(
         absPath,
         path.join(projectDir, path.basename(absPath)),
-        { overwrite: false },
+        { recursive: true, force: false },
       );
     }
 

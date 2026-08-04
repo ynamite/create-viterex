@@ -1,5 +1,5 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
-import fs from "fs-extra";
 import * as p from "@clack/prompts";
 import type { ViterexConfig } from "./types.js";
 import { saveState } from "./state.js";
@@ -123,7 +123,7 @@ export const tasks: Task[] = [
   },
   {
     name: "Build frontend",
-    skip: (c) => !fs.existsSync(path.join(c.projectDir, "package.json")),
+    skip: (c) => !existsSync(path.join(c.projectDir, "package.json")),
     run: buildFrontend,
   },
   {
@@ -204,12 +204,7 @@ export async function runPipeline(
         done.add(task.name);
         await saveState(config, [...done]);
       } catch (err) {
-        const e = err as Record<string, unknown>;
-        const stderr = e.stderr ? `\n${e.stderr}` : "";
-        const stdout = e.stdout ? `\n${e.stdout}` : "";
-        throw new Error(
-          `Task "${task.name}" failed: ${(err as Error).message}${stderr}${stdout}`,
-        );
+        throw taskError(task, err);
       }
     } else {
       const s = p.spinner();
@@ -241,13 +236,15 @@ export async function runPipeline(
           continue;
         }
 
-        const e = err as Record<string, unknown>;
-        const stderr = e.stderr ? `\n${e.stderr}` : "";
-        const stdout = e.stdout ? `\n${e.stdout}` : "";
-        throw new Error(
-          `Task "${task.name}" failed: ${(err as Error).message}${stderr}${stdout}`,
-        );
+        throw taskError(task, err);
       }
     }
   }
+}
+
+function taskError(task: Task, err: unknown): Error {
+  const e = err as Error & { stderr?: unknown; stdout?: unknown };
+  const stderr = e.stderr ? `\n${e.stderr}` : "";
+  const stdout = e.stdout ? `\n${e.stdout}` : "";
+  return new Error(`Task "${task.name}" failed: ${e.message}${stderr}${stdout}`);
 }

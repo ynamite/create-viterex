@@ -1,12 +1,13 @@
 import * as p from "@clack/prompts";
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import { ADDON_CATALOG, ALWAYS_INCLUDED, type CliOptions, type Layout, type ViterexConfig } from "./types.js";
 import { discoverPresets, loadPreset, resolveSeedFile } from "./preset.js";
 import { resolvePresetValues } from "./utils/resolve-preset-values.js";
 import { promptAugmentAddons } from "./tasks/augment-prompt.js";
 import { dataDirFor, type DetectionResult } from "./utils/detect.js";
 import { commandExists } from "./utils/exec.js";
+import { pathExists } from "./utils/fs.js";
 import { getLatestRedaxoVersion } from "./utils/redaxo-version.js";
 
 export async function collectConfig(
@@ -109,7 +110,7 @@ export async function collectConfig(
     }
     const filesDirName = loaded.config.filesDir ?? "files";
     const filesDirPath = path.resolve(loaded.dir, filesDirName);
-    if (await fs.pathExists(filesDirPath)) {
+    if (await pathExists(filesDirPath)) {
       presetFilesDir = filesDirPath;
     }
   }
@@ -586,7 +587,7 @@ async function readExistingRedaxoConfig(
 ): Promise<ExistingRedaxoSnapshot> {
   try {
     const configPath = path.join(projectDir, dataDirFor(layout), "core", "config.yml");
-    if (!(await fs.pathExists(configPath))) return {};
+    if (!(await pathExists(configPath))) return {};
     const content = await fs.readFile(configPath, "utf-8");
 
     const serverMatch = content.match(/^server:\s*['"]?([^'"\n]+)['"]?\s*$/m);

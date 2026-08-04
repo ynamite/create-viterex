@@ -1,9 +1,10 @@
 import os from "node:os";
 import path from "node:path";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyPresetFiles } from "../apply-preset-files.js";
 import type { ViterexConfig } from "../../types.js";
+import { pathExists, readJSON, writeJSON } from "../../utils/fs.js";
 
 let tmpDir: string;
 let projectDir: string;
@@ -15,13 +16,18 @@ beforeEach(async () => {
   projectDir = path.join(tmpDir, "project");
   presetDir = path.join(tmpDir, "preset");
   presetFilesDir = path.join(presetDir, "files");
-  await fs.ensureDir(projectDir);
-  await fs.ensureDir(presetFilesDir);
+  await fs.mkdir(projectDir, { recursive: true });
+  await fs.mkdir(presetFilesDir, { recursive: true });
 });
 
 afterEach(async () => {
-  await fs.remove(tmpDir);
+  await fs.rm(tmpDir, { recursive: true, force: true });
 });
+
+async function outputFile(p: string, content: string): Promise<void> {
+  await fs.mkdir(path.dirname(p), { recursive: true });
+  await fs.writeFile(p, content);
+}
 
 function makeConfig(overrides: Partial<ViterexConfig> = {}): ViterexConfig {
   return {
@@ -40,8 +46,8 @@ describe("applyPresetFiles", () => {
   });
 
   it("copies files verbatim when presetLayout is unset", async () => {
-    await fs.outputFile(path.join(presetFilesDir, ".env.example"), "FOO=bar\n");
-    await fs.outputFile(
+    await outputFile(path.join(presetFilesDir, ".env.example"), "FOO=bar\n");
+    await outputFile(
       path.join(presetFilesDir, "src/assets/img/logo.svg"),
       "<svg/>",
     );
@@ -57,7 +63,7 @@ describe("applyPresetFiles", () => {
   });
 
   it("copies files when presetLayout matches selected layout", async () => {
-    await fs.outputFile(path.join(presetFilesDir, ".env.example"), "FOO=bar\n");
+    await outputFile(path.join(presetFilesDir, ".env.example"), "FOO=bar\n");
 
     await applyPresetFiles(
       makeConfig({ presetFilesDir, presetLayout: "modern", layout: "modern" }),
@@ -69,7 +75,7 @@ describe("applyPresetFiles", () => {
   });
 
   it("throws before copying when presetLayout does not match", async () => {
-    await fs.outputFile(path.join(presetFilesDir, ".env.example"), "FOO=bar\n");
+    await outputFile(path.join(presetFilesDir, ".env.example"), "FOO=bar\n");
 
     await expect(
       applyPresetFiles(
@@ -77,12 +83,12 @@ describe("applyPresetFiles", () => {
       ),
     ).rejects.toThrow(/targets layout 'classic'.*'modern' was selected/);
 
-    expect(await fs.pathExists(path.join(projectDir, ".env.example"))).toBe(false);
+    expect(await pathExists(path.join(projectDir, ".env.example"))).toBe(false);
   });
 
   it("overwrites existing destination files", async () => {
-    await fs.outputFile(path.join(presetFilesDir, ".env.example"), "FROM=preset\n");
-    await fs.outputFile(path.join(projectDir, ".env.example"), "FROM=user\n");
+    await outputFile(path.join(presetFilesDir, ".env.example"), "FROM=preset\n");
+    await outputFile(path.join(projectDir, ".env.example"), "FROM=user\n");
 
     await applyPresetFiles(makeConfig({ presetFilesDir }));
 
@@ -92,8 +98,8 @@ describe("applyPresetFiles", () => {
   });
 
   it("merges folder contents without removing pre-existing siblings", async () => {
-    await fs.outputFile(path.join(presetFilesDir, "src/a.txt"), "preset-a\n");
-    await fs.outputFile(path.join(projectDir, "src/b.txt"), "user-b\n");
+    await outputFile(path.join(presetFilesDir, "src/a.txt"), "preset-a\n");
+    await outputFile(path.join(projectDir, "src/b.txt"), "user-b\n");
 
     await applyPresetFiles(makeConfig({ presetFilesDir }));
 
@@ -102,38 +108,40 @@ describe("applyPresetFiles", () => {
   });
 
   it("merges a package-deps.json into the project package.json instead of copying it", async () => {
-    await fs.writeJSON(path.join(projectDir, "package.json"), {
+    await writeJSON(path.join(projectDir, "package.json"), {
       name: "proj",
       dependencies: { "viterex-stub-dep": "^1.0.0" },
     });
-    await fs.writeJSON(path.join(presetFilesDir, "package-deps.json"), {
+    await writeJSON(path.join(presetFilesDir, "package-deps.json"), {
       dependencies: { alpinejs: "^3.14.0" },
     });
 
     await applyPresetFiles(makeConfig({ presetFilesDir }));
 
-    const pkg = await fs.readJSON(path.join(projectDir, "package.json"));
+    const pkg = await readJSON<{ dependencies?: Record<string, string> }>(
+      path.join(projectDir, "package.json"),
+    );
     expect(pkg.dependencies).toEqual({
       alpinejs: "^3.14.0",
       "viterex-stub-dep": "^1.0.0",
     });
     // the package-deps.json itself is not copied into the project
-    expect(await fs.pathExists(path.join(projectDir, "package-deps.json"))).toBe(false);
+    expect(await pathExists(path.join(projectDir, "package-deps.json"))).toBe(false);
   });
 
   it("does not copy .DS_Store files", async () => {
-    await fs.outputFile(path.join(presetFilesDir, "public/favicon.ico"), "icon");
-    await fs.outputFile(path.join(presetFilesDir, ".DS_Store"), "junk");
+    await outputFile(path.join(presetFilesDir, "public/favicon.ico"), "icon");
+    await outputFile(path.join(presetFilesDir, ".DS_Store"), "junk");
 
     await applyPresetFiles(makeConfig({ presetFilesDir }));
 
-    expect(await fs.pathExists(path.join(projectDir, "public/favicon.ico"))).toBe(true);
-    expect(await fs.pathExists(path.join(projectDir, ".DS_Store"))).toBe(false);
+    expect(await pathExists(path.join(projectDir, "public/favicon.ico"))).toBe(true);
+    expect(await pathExists(path.join(projectDir, ".DS_Store"))).toBe(false);
   });
 
   it("package-deps merge is idempotent — a second run leaves package.json byte-identical", async () => {
-    await fs.writeJSON(path.join(projectDir, "package.json"), { name: "proj" });
-    await fs.writeJSON(path.join(presetFilesDir, "package-deps.json"), {
+    await writeJSON(path.join(projectDir, "package.json"), { name: "proj" });
+    await writeJSON(path.join(presetFilesDir, "package-deps.json"), {
       dependencies: { alpinejs: "^3.14.0" },
     });
 
@@ -146,20 +154,20 @@ describe("applyPresetFiles", () => {
   });
 
   it("copies files even when the project package.json is missing", async () => {
-    await fs.outputFile(path.join(presetFilesDir, "src/assets/css/style.css"), "body{}");
-    await fs.writeJSON(path.join(presetFilesDir, "package-deps.json"), {
+    await outputFile(path.join(presetFilesDir, "src/assets/css/style.css"), "body{}");
+    await writeJSON(path.join(presetFilesDir, "package-deps.json"), {
       dependencies: { alpinejs: "^3.14.0" },
     });
 
     await applyPresetFiles(makeConfig({ presetFilesDir }));
 
-    expect(await fs.pathExists(path.join(projectDir, "src/assets/css/style.css"))).toBe(true);
-    expect(await fs.pathExists(path.join(projectDir, "package.json"))).toBe(false);
+    expect(await pathExists(path.join(projectDir, "src/assets/css/style.css"))).toBe(true);
+    expect(await pathExists(path.join(projectDir, "package.json"))).toBe(false);
   });
 
   it("merges a top-level .gitignore into the project .gitignore instead of clobbering it", async () => {
-    await fs.outputFile(path.join(projectDir, ".gitignore"), "node_modules\nvendor\n");
-    await fs.outputFile(path.join(presetFilesDir, ".gitignore"), "vendor\n.idea/\n");
+    await outputFile(path.join(projectDir, ".gitignore"), "node_modules\nvendor\n");
+    await outputFile(path.join(presetFilesDir, ".gitignore"), "vendor\n.idea/\n");
 
     await applyPresetFiles(makeConfig({ presetFilesDir }));
 
@@ -172,7 +180,7 @@ describe("applyPresetFiles", () => {
   });
 
   it("creates the project .gitignore from a preset .gitignore when none exists", async () => {
-    await fs.outputFile(path.join(presetFilesDir, ".gitignore"), "dist/\n.cache/\n");
+    await outputFile(path.join(presetFilesDir, ".gitignore"), "dist/\n.cache/\n");
 
     await applyPresetFiles(makeConfig({ presetFilesDir }));
 
@@ -182,8 +190,8 @@ describe("applyPresetFiles", () => {
   });
 
   it("copies a nested .gitignore verbatim (only the top-level one is merged)", async () => {
-    await fs.outputFile(path.join(presetFilesDir, ".gitignore"), "dist/\n");
-    await fs.outputFile(
+    await outputFile(path.join(presetFilesDir, ".gitignore"), "dist/\n");
+    await outputFile(
       path.join(presetFilesDir, "public/uploads/.gitignore"),
       "*\n!.gitkeep\n",
     );
@@ -201,8 +209,8 @@ describe("applyPresetFiles", () => {
   });
 
   it("gitignore merge is idempotent — a second run leaves .gitignore byte-identical", async () => {
-    await fs.outputFile(path.join(projectDir, ".gitignore"), "node_modules\n");
-    await fs.outputFile(path.join(presetFilesDir, ".gitignore"), ".idea/\n");
+    await outputFile(path.join(projectDir, ".gitignore"), "node_modules\n");
+    await outputFile(path.join(presetFilesDir, ".gitignore"), ".idea/\n");
 
     await applyPresetFiles(makeConfig({ presetFilesDir }));
     const first = await fs.readFile(path.join(projectDir, ".gitignore"), "utf-8");

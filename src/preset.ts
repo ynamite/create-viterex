@@ -1,8 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import fs from "fs-extra";
+import fs from "node:fs/promises";
 import * as p from "@clack/prompts";
 import { ADDON_CATALOG, type AddonSelection, type PresetAddonInput, type PresetConfig } from "./types.js";
+import { pathExists, readJSON } from "./utils/fs.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const presetsDir = path.resolve(__dirname, "../presets");
@@ -19,15 +20,15 @@ export interface PresetSummary {
 export async function discoverPresets(): Promise<PresetSummary[]> {
   const presets: PresetSummary[] = [];
 
-  if (await fs.pathExists(presetsDir)) {
+  if (await pathExists(presetsDir)) {
     const entries = await fs.readdir(presetsDir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory()) {
         const configPath = path.join(presetsDir, entry.name, "preset.json");
-        if (await fs.pathExists(configPath)) {
+        if (await pathExists(configPath)) {
           let description: string | undefined;
           try {
-            const cfg = (await fs.readJSON(configPath)) as { description?: string };
+            const cfg = await readJSON<{ description?: string }>(configPath);
             description = cfg.description;
           } catch {
             // ignore — preset will still appear, just without a hint
@@ -75,11 +76,11 @@ export async function loadPreset(
     configPath = path.join(dir, "preset.json");
   }
 
-  if (!(await fs.pathExists(configPath))) {
+  if (!(await pathExists(configPath))) {
     throw new Error(`Preset not found: ${configPath}`);
   }
 
-  const raw: PresetConfig = await fs.readJSON(configPath);
+  const raw = await readJSON<PresetConfig>(configPath);
   const config: PresetConfig = {
     ...raw,
     addons: raw.addons?.map(normalizePresetAddon),
