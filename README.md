@@ -1,7 +1,5 @@
 # create-viterex
 
-> ⚠️ **Alpha release.** `create-viterex` is in active alpha — expect breaking changes between alpha versions. Pin with `@alpha` to acknowledge. Report issues at <https://github.com/ynamite/viterex/issues>.
-
 CLI tool to scaffold a **ViteRex** project — [Redaxo CMS](https://redaxo.org/) + [Vite](https://vitejs.dev/) + [Tailwind CSS](https://tailwindcss.com/) — *or* augment an existing Redaxo install with viterex_addon, ydeploy, and Deployer PHP.
 
 [Viterex-installer-short.webm](https://github.com/user-attachments/assets/09684bb5-2402-4640-8437-08918cc13b44)
@@ -10,11 +8,11 @@ CLI tool to scaffold a **ViteRex** project — [Redaxo CMS](https://redaxo.org/)
 
 ```bash
 # Fresh install in a new directory
-npx create-viterex@alpha my-project
+npx create-viterex my-project
 
 # Augment the current directory (auto-detects existing Redaxo)
 cd ~/path/to/existing/redaxo
-npx create-viterex@alpha .
+npx create-viterex .
 ```
 
 The CLI inspects the target directory and switches between two modes:

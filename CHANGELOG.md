@@ -8,6 +8,12 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-08-04
+
+### Fixed
+
+- **README no longer carries the alpha-release warning** — the note and `@alpha` install commands lingered from the pre-release phase and showed on npmjs.com for the stable 3.0.0.
+
 ## [3.0.0] - 2026-08-04
 
 First stable release of the v3 rewrite (TypeScript pipeline, presets, `viterex_addon` stubs).
