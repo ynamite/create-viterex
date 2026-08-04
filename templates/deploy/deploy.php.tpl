@@ -30,6 +30,7 @@ $removeOnRelease = [
     '.browserslistrc',
     '.env',
     '.env.local',
+    '.npmrc',
     '.prettierrc',
     '.vite-reload-trigger',
     'biome.jsonc',
