@@ -1,6 +1,6 @@
 {
   "name": "create-viterex",
-  "version": "3.0.0-alpha.3",
+  "version": "3.0.0",
   "description": "CLI to scaffold a ViteRex (Redaxo + Vite) project",
   "type": "module",
   "author": "ynamite <ynamite@gmail.com>",
@@ -26,15 +26,15 @@
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
     "execa": "^9.5.2",
-    "ora": "^8.2.0",
-    "fs-extra": "^11.3.0"
+    "fs-extra": "^11.3.0",
+    "ora": "^8.2.0"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.0.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "@types/fs-extra": "^11.0.4",
-    "@types/node": "^22.0.0"
+    "vitest": "^3.0.0"
   },
   "files": [
     "dist",

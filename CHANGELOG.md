@@ -8,6 +8,18 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-08-04
+
+First stable release of the v3 rewrite (TypeScript pipeline, presets, `viterex_addon` stubs).
+
+### Changed
+
+- **Default deployment template overhauled** (`templates/deploy/deploy.php.tpl`): configurable `$removeOnRelease` list of dev-only files pruned from each release, conditional `assets_install`, and general cleanup of the generated `deploy.php`.
+
+### Fixed
+
+- **Restored the `{{DEPLOYER_EXTRAS}}` / `{{DEPLOYER_EXTRAS_CLEAR_PATHS}}` placeholders in the deploy template.** The deployment-setup update had replaced them with a hardcoded `require` of `deployer.task.release.metanet.php` (a MASSIF-preset file), so any non-MASSIF project with deploy enabled got a `deploy.php` that fataled on a missing file, and preset `deployerExtras` were copied but never wired in. Extras are again injected per preset; the MASSIF preset output is unchanged.
+
 ## [3.0.0-alpha.3] - 2026-06-02
 
 ### Added (2026-06-02)

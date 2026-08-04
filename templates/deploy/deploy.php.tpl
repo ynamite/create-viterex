@@ -24,9 +24,6 @@ $deploymentRepository = 'git@github.com:user/repo.git';
 // es muss nicht zwingend ein Git-Repository verwendet werden; dieses Skript prueft, ob ein Git-Repository initialisiert wurde.
 // ohne Git-Repository muss ggf. der `deploy:update_code`-Task in dieser Datei angepasst werden (ab Zeile 105)
 
-// es muss nicht zwingend ein Git-Repository verwendet werden; dieses Skript prueft, ob ein Git-Repository initialisiert wurde.
-// ohne Git-Repository muss ggf. der `deploy:update_code`-Task in dieser Datei angepasst werden (ab Zeile 105)
-
 $removeOnRelease = [
     'docs',
     'public/dist/assets/img/.gitkeep',
@@ -40,7 +37,7 @@ $removeOnRelease = [
     'composer.json',
     'composer.lock',
     'deploy.php',
-    'deployer.task.release.metanet.php',
+{{DEPLOYER_EXTRAS_CLEAR_PATHS}}
     'deployer.task.setup.php',
     'jsconfig.json',
     'localhost+2-key.pem',
@@ -58,7 +55,7 @@ $removeOnRelease = [
 
 require __DIR__ . '/src/addons/ydeploy/deploy_yak.php';
 require __DIR__ . '/deployer.task.setup.php';
-require __DIR__ . '/deployer.task.release.metanet.php';
+{{DEPLOYER_EXTRAS}}
 
 $isGit = is_dir(__DIR__ . '/.git');
 
