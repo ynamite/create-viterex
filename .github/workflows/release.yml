@@ -28,13 +28,13 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
       # OIDC Trusted Publishing (token-less publish + provenance auth) requires
-      # npm >= 11.5.1; Node 20 ships npm 10.8.x, which signs provenance but can't
-      # authenticate the publish (registry returns E404). Upgrade before publish.
+      # npm >= 11.5.1; upgrade in case the runner's bundled npm is older.
+      # npm 12 requires Node >= 22, hence node-version 24 above.
       - name: Upgrade npm for Trusted Publishing
         run: npm install -g npm@latest
 
