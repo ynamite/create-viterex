@@ -5,7 +5,7 @@ import { styleText } from "node:util";
 import { Command } from "commander";
 import { collectConfig } from "./prompts.js";
 import { runPipeline } from "./pipeline.js";
-import { loadState } from "./state.js";
+import { loadState, saveState } from "./state.js";
 import { detectInstallation } from "./utils/detect.js";
 import { pathExists, writeJSON } from "./utils/fs.js";
 import { loadConfigFile } from "./utils/load-config.js";
@@ -134,6 +134,13 @@ program
       config.verbose = !!options.verbose;
       config.forcePush = config.forcePush || !!options.forcePush;
       config.withTower = config.withTower || !!options.withTower;
+
+      // Seed the state file before the pipeline runs so a failure before the
+      // first task completes doesn't leave a stale (previous-run) config in
+      // place for a later --resume to silently pick up.
+      if (!options.resume && !options.dryRun) {
+        await saveState(config, []);
+      }
 
       await runPipeline(config, { completedTasks, dryRun: !!options.dryRun });
 

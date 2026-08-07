@@ -159,6 +159,7 @@ export interface CliOptions {
   withTower?: boolean;
   lang?: string;
   timezone?: string;
+  generateConfig?: boolean | string;
 }
 
 export interface SubmoduleAddon {

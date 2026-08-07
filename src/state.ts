@@ -79,7 +79,7 @@ async function readStateData(projectDir: string): Promise<StateData | null> {
   } catch {
     return null;
   }
-  if (!raw?.config) return null;
+  if (!raw?.config || typeof raw.config !== "object" || Array.isArray(raw.config)) return null;
   const rawConfig = raw.config as Partial<ViterexConfig> & Record<string, unknown>;
 
   // Migrate old massifSettings → templateReplacements
@@ -122,8 +122,14 @@ async function loadStateFromDir(
 ): Promise<StateData> {
   const data = await readStateData(projectDir);
   if (!data) {
+    const statePath = resolveStatePath(projectDir);
+    if (await pathExists(statePath)) {
+      throw new Error(
+        `State file at ${statePath} is corrupt — delete it or run without --resume.`,
+      );
+    }
     throw new Error(
-      `No state file found at ${resolveStatePath(projectDir)}. Cannot resume — run without --resume to start fresh.`,
+      `No state file found at ${statePath}. Cannot resume — run without --resume to start fresh.`,
     );
   }
 

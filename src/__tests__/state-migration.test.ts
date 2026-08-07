@@ -194,6 +194,12 @@ describe("loadState — older state-file migration", () => {
       "info@acme.test",
     );
   });
+
+  it("reports a corrupt state file distinctly from a missing one", async () => {
+    const stateFile = path.join(tmpDir, ".viterex-state.json");
+    await fs.writeFile(stateFile, "{not json");
+    await expect(loadState(tmpDir, {})).rejects.toThrow(/corrupt/);
+  });
 });
 
 describe("loadSavedConfig — persistent state reuse", () => {
@@ -231,6 +237,12 @@ describe("loadSavedConfig — persistent state reuse", () => {
   it("returns null for an unparseable (truncated) state file", async () => {
     const stateFile = path.join(tmpDir, ".viterex-state.json");
     await fs.writeFile(stateFile, '{"config": {"projectName": "tru');
+    expect(await loadSavedConfig(tmpDir)).toBeNull();
+  });
+
+  it("returns null when config is not an object", async () => {
+    const stateFile = path.join(tmpDir, ".viterex-state.json");
+    await writeJSON(stateFile, { config: "bad", completedTasks: [] });
     expect(await loadSavedConfig(tmpDir)).toBeNull();
   });
 });

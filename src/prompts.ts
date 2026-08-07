@@ -59,7 +59,19 @@ export async function collectConfig(
     isAugment || useCurrentDir
       ? process.cwd()
       : path.resolve(process.cwd(), projectName as string);
-  const saved = await loadSavedConfig(candidateDir);
+  // Only offer reuse when the user hasn't signaled they want different
+  // answers this time: explicit setup-shaping flags mean "prompt me fresh",
+  // and --generate-config's own copy ("re-run the installation") would lie
+  // since generating a config never installs anything.
+  const wantsFreshPrompts =
+    !options.generateConfig &&
+    !options.fresh &&
+    options.pm === undefined &&
+    options.layout === undefined &&
+    options.lang === undefined &&
+    options.timezone === undefined &&
+    options.preset === undefined;
+  const saved = wantsFreshPrompts ? await loadSavedConfig(candidateDir) : null;
   if (saved) {
     const reuse = await p.confirm({
       message:
@@ -77,6 +89,11 @@ export async function collectConfig(
         );
       } else {
         saved.projectDir = candidateDir; // survive a moved project dir
+        // Mirror --resume's skip-flag handling so an accepted reuse still
+        // honours flags passed on this invocation.
+        if (options.skipDb) saved.skipDb = true;
+        if (options.skipAddons) saved.skipAddons = true;
+        if (options.skipGit) saved.skipGit = true;
         p.outro("Using saved answers — starting installation...");
         return saved;
       }
