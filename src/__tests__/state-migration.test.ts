@@ -227,4 +227,10 @@ describe("loadSavedConfig — persistent state reuse", () => {
     await writeJSON(stateFile, { completedTasks: [] });
     expect(await loadSavedConfig(tmpDir)).toBeNull();
   });
+
+  it("returns null for an unparseable (truncated) state file", async () => {
+    const stateFile = path.join(tmpDir, ".viterex-state.json");
+    await fs.writeFile(stateFile, '{"config": {"projectName": "tru');
+    expect(await loadSavedConfig(tmpDir)).toBeNull();
+  });
 });

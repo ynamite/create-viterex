@@ -73,7 +73,12 @@ async function readStateData(projectDir: string): Promise<StateData | null> {
   const statePath = resolveStatePath(projectDir);
   if (!(await pathExists(statePath))) return null;
 
-  const raw = await readJSON<Record<string, unknown>>(statePath);
+  let raw: Record<string, unknown> | null = null;
+  try {
+    raw = await readJSON<Record<string, unknown>>(statePath);
+  } catch {
+    return null;
+  }
   if (!raw?.config) return null;
   const rawConfig = raw.config as Partial<ViterexConfig> & Record<string, unknown>;
 
