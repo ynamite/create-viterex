@@ -2,6 +2,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { exec } from "../utils/exec.js";
 import { pathExists } from "../utils/fs.js";
+import { mergeGitignore } from "../utils/merge-gitignore.js";
 import type { ViterexConfig } from "../types.js";
 
 const SAFETY_IGNORES = [
@@ -31,6 +32,26 @@ export async function initGitRepo(config: ViterexConfig): Promise<void> {
   }
 }
 
+/**
+ * Make sure the persistent .viterex-state.json (it holds DB and admin
+ * credentials) never enters the repo. Runs right before the initial
+ * `git add .`; the merge is idempotent so re-runs add nothing.
+ */
+export async function ensureStateIgnored(projectDir: string): Promise<void> {
+  const gitignorePath = path.join(projectDir, ".gitignore");
+  const existing = (await pathExists(gitignorePath))
+    ? await fs.readFile(gitignorePath, "utf-8")
+    : "";
+  const { content, added } = mergeGitignore(
+    existing,
+    ".viterex-state.json\n",
+    "Added by create-viterex",
+  );
+  if (added > 0) {
+    await fs.writeFile(gitignorePath, content);
+  }
+}
+
 export async function gitInitialCommit(config: ViterexConfig): Promise<void> {
   const { projectDir, layout, verbose } = config;
 
@@ -41,6 +62,8 @@ export async function gitInitialCommit(config: ViterexConfig): Promise<void> {
   } catch {
     // No HEAD yet; continue.
   }
+
+  await ensureStateIgnored(projectDir);
 
   await exec("git", ["add", "."], { cwd: projectDir, verbose });
 
