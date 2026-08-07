@@ -8,6 +8,19 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-08-07
+
+### Added
+
+- **Bun is now a supported package manager — and the default when installed.** `bun` joins `pnpm`/`yarn`/`npm` across the full flow: the PM prompt (listed first, with a `(not installed)` hint on missing PMs), the `--pm` flag, presets, dep install, the interactive upgrade step (`bun update --interactive --latest`), the browserslist refresh (per-PM dlx runner: `bunx` / `pnpm dlx` / `npx`), and the generated `deploy.php` (chosen PM pinned as the first `commandExist` check, existing chain kept as fallback). The default is auto-detected: `bun` on PATH → `bun`, else `pnpm`. The chosen PM is also stamped into the project `package.json` as `"packageManager": "<pm>@<version>"` before the first install, and a PM resolved via `--pm` or a preset that isn't installed now fails fast before the pipeline starts instead of mid-run.
+- **A completed install can be re-run without re-entering answers.** `.viterex-state.json` now persists in the project after a successful install (it was previously deleted). When the interactive flow finds one in the target directory, it offers to reuse the saved answers — running the full pipeline with the previous config (idempotent tasks skip what's already done). Declining answers prompts as usual; `--config` and `--resume` are unaffected.
+
+### Fixed
+
+- **`.viterex-state.json` is no longer committed into the scaffolded repo.** The state file — which contains the DB and Redaxo admin passwords — was tracked by the initial `git add -A` and then deleted from disk, leaving the credentials in git history (and on the remote when a git provider was configured). `initGitRepo` now merges `.viterex-state.json` into the project `.gitignore` (idempotent, covers fresh and augment installs) before anything is committed. Existing projects need a one-time `git rm --cached .viterex-state.json` plus a gitignore entry.
+- **`--pm` no longer silently overrides preset `packageManager`.** The flag had a commander hard default of `"pnpm"`, so the documented precedence (flag > preset > prompt) never held — the PM prompt was dead code and a preset's `packageManager` could never take effect. The default is gone; `--pm` only wins when actually passed.
+- `loadState` no longer crashes on an unparseable state file — it warns and starts fresh.
+
 ## [3.1.0] - 2026-08-04
 
 ### Changed
