@@ -170,4 +170,20 @@ describe("resolvePresetValues", () => {
     expect(r.dbHost).toBeUndefined();
     expect(r.gitProvider).toBeUndefined();
   });
+
+  it("passes a preset packageManager 'bun' through when no --pm flag is set", () => {
+    const preset: PresetConfig = { ...base, packageManager: "bun" };
+    const r = resolvePresetValues(preset, NO_OPTS);
+
+    expect(r.packageManager).toBe("bun");
+    expect(r.fromPreset).toContain("packageManager");
+  });
+
+  it("lets an explicit --pm flag beat the preset packageManager", () => {
+    const preset: PresetConfig = { ...base, packageManager: "pnpm" };
+    const r = resolvePresetValues(preset, { pm: "bun" });
+
+    expect(r.packageManager).toBe("bun");
+    expect(r.fromPreset).not.toContain("packageManager");
+  });
 });

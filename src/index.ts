@@ -29,7 +29,7 @@ program
   .option("--skip-db", "Skip database creation")
   .option("--skip-addons", "Skip addon installation")
   .option("--skip-git", "Don't initialize a git repo")
-  .option("--pm <manager>", "Package manager for JS deps after Redaxo install: pnpm | yarn | npm", "pnpm")
+  .option("--pm <manager>", "Package manager for JS deps after Redaxo install: bun | pnpm | yarn | npm (default: bun if installed, else pnpm)")
   .option("--preset <name>", "Preset that drives addon selection, layout, seed.sql and template files. Built-in id (default, massif), or path to a preset directory or preset.json")
   .option("--config <path>", "Path to a previously-generated viterex.json (or a directory containing one). Pins all answers and skips prompts. Different from --preset, which only pre-fills some")
   .option("--resume", "Resume a previously failed run, skipping completed tasks")
