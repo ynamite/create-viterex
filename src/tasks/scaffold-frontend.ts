@@ -129,6 +129,7 @@ export async function scaffoldFrontend(config: ViterexConfig): Promise<void> {
       path.join(projectDir, "deploy.php"),
       {
         ...replacements,
+        PACKAGE_MANAGER: config.packageManager,
         DEPLOYER_EXTRAS: requiresBlock,
         DEPLOYER_EXTRAS_CLEAR_PATHS: clearPathsBlock,
       },

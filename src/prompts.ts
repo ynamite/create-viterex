@@ -7,6 +7,7 @@ import { resolvePresetValues } from "./utils/resolve-preset-values.js";
 import { promptAugmentAddons } from "./tasks/augment-prompt.js";
 import { dataDirFor, type DetectionResult } from "./utils/detect.js";
 import { commandExists } from "./utils/exec.js";
+import { detectDefaultPm, PACKAGE_MANAGERS, type PackageManager } from "./utils/detect-pm.js";
 import { pathExists } from "./utils/fs.js";
 import { getLatestRedaxoVersion } from "./utils/redaxo-version.js";
 
@@ -140,17 +141,39 @@ export async function collectConfig(
 
   let packageManager = resolved.packageManager;
   if (packageManager === undefined) {
+    const installed = new Set<PackageManager>();
+    for (const pm of PACKAGE_MANAGERS) {
+      if (await commandExists(pm)) installed.add(pm);
+    }
+    const hint = (pm: PackageManager, base: string) =>
+      installed.has(pm) ? base : `${base} — not installed`;
     const answer = await p.select({
       message: "Package manager",
-      initialValue: (options.pm as ViterexConfig["packageManager"]) ?? "pnpm",
+      initialValue: await detectDefaultPm(),
       options: [
-        { value: "pnpm", label: "pnpm", hint: "fast, strict, content-addressable store (default)" },
-        { value: "yarn", label: "Yarn", hint: "Yarn 1.x — wide ecosystem compatibility" },
-        { value: "npm",  label: "npm",  hint: "bundled with Node — slowest install" },
+        { value: "bun",  label: "bun",  hint: hint("bun", "fastest") },
+        { value: "pnpm", label: "pnpm", hint: hint("pnpm", "fast, strict, content-addressable store") },
+        { value: "yarn", label: "Yarn", hint: hint("yarn", "Yarn 1.x — wide ecosystem compatibility") },
+        { value: "npm",  label: "npm",  hint: hint("npm", "bundled with Node — slowest install") },
       ],
     });
     if (p.isCancel(answer)) process.exit(0);
     packageManager = answer as ViterexConfig["packageManager"];
+  }
+
+  // Fail fast: an unknown or not-installed PM (from --pm, a preset, or the
+  // select above) would otherwise die mid-pipeline in install-deps.
+  if (!PACKAGE_MANAGERS.includes(packageManager)) {
+    p.log.error(
+      `Unknown package manager '${packageManager}' — use one of: ${PACKAGE_MANAGERS.join(", ")}.`,
+    );
+    process.exit(1);
+  }
+  if (!(await commandExists(packageManager))) {
+    p.log.error(
+      `Package manager '${packageManager}' is not installed (not found on PATH).`,
+    );
+    process.exit(1);
   }
 
   // ─── Layout (fresh only) ──────────────────────────────────────────

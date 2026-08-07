@@ -10,6 +10,8 @@ import { detectInstallation } from "./utils/detect.js";
 import { pathExists, writeJSON } from "./utils/fs.js";
 import { loadConfigFile } from "./utils/load-config.js";
 import { printBanner, printSuccess, printError } from "./utils/log.js";
+import { PACKAGE_MANAGERS } from "./utils/detect-pm.js";
+import { commandExists } from "./utils/exec.js";
 import type { ViterexConfig } from "./types.js";
 
 const pkgVersion = (() => {
@@ -29,7 +31,7 @@ program
   .option("--skip-db", "Skip database creation")
   .option("--skip-addons", "Skip addon installation")
   .option("--skip-git", "Don't initialize a git repo")
-  .option("--pm <manager>", "Package manager for JS deps after Redaxo install: pnpm | yarn | npm", "pnpm")
+  .option("--pm <manager>", "Package manager for JS deps after Redaxo install: bun | pnpm | yarn | npm (default: bun if installed, else pnpm)")
   .option("--preset <name>", "Preset that drives addon selection, layout, seed.sql and template files. Built-in id (default, massif), or path to a preset directory or preset.json")
   .option("--config <path>", "Path to a previously-generated viterex.json (or a directory containing one). Pins all answers and skips prompts. Different from --preset, which only pre-fills some")
   .option("--resume", "Resume a previously failed run, skipping completed tasks")
@@ -111,6 +113,24 @@ program
           : await collectConfig(projectName, options, detection);
 
         await clearState(config.projectDir);
+      }
+
+      // Fail fast for the --config/--resume paths, which bypass collectConfig's
+      // interactive PM prompt (and its own validation) entirely — a stale state
+      // file or a hand-edited config could carry an unknown or no-longer-installed
+      // package manager that would otherwise die mid-pipeline in install-deps.
+      if (options.resume || options.config) {
+        const source = options.resume ? "state file" : "config file";
+        if (!PACKAGE_MANAGERS.includes(config.packageManager)) {
+          throw new Error(
+            `Unknown package manager '${config.packageManager}' in ${source} — use one of: ${PACKAGE_MANAGERS.join(", ")}.`,
+          );
+        }
+        if (!(await commandExists(config.packageManager))) {
+          throw new Error(
+            `Package manager '${config.packageManager}' from ${source} is not installed (not found on PATH).`,
+          );
+        }
       }
 
       config.verbose = !!options.verbose;

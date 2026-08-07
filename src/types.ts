@@ -32,7 +32,7 @@ export interface ViterexConfig {
   addons: AddonSelection[];
 
   // Vite / Frontend
-  packageManager: "yarn" | "npm" | "pnpm";
+  packageManager: "bun" | "yarn" | "npm" | "pnpm";
 
   // Preset
   preset: string;
@@ -128,7 +128,7 @@ export interface PresetConfig {
   dbPassword?: string;
 
   // Frontend / deploy
-  packageManager?: "yarn" | "npm" | "pnpm";
+  packageManager?: "bun" | "yarn" | "npm" | "pnpm";
   setupDeploy?: boolean;
 
   // Git

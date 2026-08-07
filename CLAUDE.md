@@ -17,7 +17,7 @@ Three-layer design:
    - `install-redaxo.ts` — `php redaxo/bin/console setup:run` with flags
    - `install-addons.ts` — Loop: download → install → activate per addon via Redaxo CLI
    - `scaffold-frontend.ts` — Copy template files and generate .env
-   - `install-deps.ts` — composer install + yarn/npm/pnpm install
+   - `install-deps.ts` — composer install + bun/pnpm/yarn/npm install
    - `init-git.ts` — `initGitRepo` (git init, early — `git submodule add` needs `.git`) + `gitInitialCommit` (the **last** file-touching task, so the user ends on a clean `git status`). Build + browserslist refresh run before the commit; push/browser/next-steps run after it and touch no tracked files.
 
 ## Tech stack
@@ -68,7 +68,7 @@ Releases are tag-triggered: push a `v*` tag and `.github/workflows/release.yml` 
 - `--skip-db` — skip database creation
 - `--skip-addons` — skip addon installation
 - `--skip-git` — don't init git repo
-- `--pm <yarn|npm|pnpm>` — package manager (default: pnpm)
+- `--pm <bun|pnpm|yarn|npm>` — package manager (default: bun if installed, else pnpm)
 - `--config <path>` — load config from JSON file, skip all prompts
 
 ## Templates

@@ -62,7 +62,7 @@ create-viterex [project-name] [options]
 | `--skip-db`          | Skip database creation (assume pre-populated empty DB at credentials) | `false`          |
 | `--skip-addons`      | Skip addon installation                                              | `false`          |
 | `--skip-git`         | Don't initialize a git repo                                          | `false`          |
-| `--pm <manager>`     | Package manager used to install JS deps after Redaxo is set up       | `pnpm`           |
+| `--pm <manager>`     | Package manager for JS deps: `bun` \| `pnpm` \| `yarn` \| `npm`      | `bun` if installed, else `pnpm` |
 | `--preset <name>`    | Built-in id (`default`, `custom`) or path to a preset directory or `preset.json` | prompted |
 | `--config <path>`    | Path to a previously-generated `viterex.json` (or directory containing one); skips all prompts | — |
 | `--resume`           | Resume a previously failed run, skipping completed tasks             | `false`          |
@@ -135,7 +135,7 @@ The config file's `projectDir` field provides the resume target when no position
   ],
 
   // Frontend
-  "packageManager": "pnpm",          // "yarn" | "npm" | "pnpm"
+  "packageManager": "pnpm",          // "bun" | "yarn" | "npm" | "pnpm"
 
   // Preset
   "preset": "default",

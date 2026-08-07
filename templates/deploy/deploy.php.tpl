@@ -34,6 +34,8 @@ $removeOnRelease = [
     '.prettierrc',
     '.vite-reload-trigger',
     'biome.jsonc',
+    'bun.lock',
+    'bun.lockb',
     'CLAUDE.md',
     'composer.json',
     'composer.lock',
@@ -45,10 +47,12 @@ $removeOnRelease = [
     'localhost+2.pem',
     'LocalValetDriver.php',
     'package.json',
+    'package-lock.json',
     'pnpm-lock.yaml',
     'stylelint.config.js',
     'tailwind.config.js',
     'vite.config.js',
+    'yarn.lock',
     '.yarn',
 ];
 
@@ -67,18 +71,21 @@ set(
     }
 );
 
+// The build runs on host('local') (see ydeploy's deploy task), so the package
+// manager chosen at scaffold time is normally present. The chain below is a
+// fallback only — e.g. when a teammate without that PM deploys.
 set('assets_install', static function () {
     if (!test('[ -f {{release_path}}/package.json ]')) {
         return false;
     }
-    if (commandExist('pnpm')) {
-        return 'pnpm install';
+    if (commandExist('{{PACKAGE_MANAGER}}')) {
+        return '{{PACKAGE_MANAGER}} install';
     }
-    if (commandExist('yarn')) {
-        return 'yarn install';
-    }
-    if (commandExist('npm')) {
-        return 'npm install';
+    warning('{{PACKAGE_MANAGER}} not found — falling back to the first available package manager');
+    foreach (['bun', 'pnpm', 'yarn', 'npm'] as $pm) {
+        if (commandExist($pm)) {
+            return $pm . ' install';
+        }
     }
 
     return false;
@@ -93,14 +100,13 @@ set('assets_build', static function () {
         return 'APP_ENV=prod node_modules/.bin/gulp build';
     }
 
-    if (commandExist('pnpm')) {
-        return 'pnpm build';
+    if (commandExist('{{PACKAGE_MANAGER}}')) {
+        return '{{PACKAGE_MANAGER}} run build';
     }
-    if (commandExist('yarn')) {
-        return 'yarn build';
-    }
-    if (commandExist('npm')) {
-        return 'npm run build';
+    foreach (['bun', 'pnpm', 'yarn', 'npm'] as $pm) {
+        if (commandExist($pm)) {
+            return $pm . ' run build';
+        }
     }
 
     return false;
