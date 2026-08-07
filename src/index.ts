@@ -5,7 +5,7 @@ import { styleText } from "node:util";
 import { Command } from "commander";
 import { collectConfig } from "./prompts.js";
 import { runPipeline } from "./pipeline.js";
-import { loadState, clearState } from "./state.js";
+import { loadState } from "./state.js";
 import { detectInstallation } from "./utils/detect.js";
 import { pathExists, writeJSON } from "./utils/fs.js";
 import { loadConfigFile } from "./utils/load-config.js";
@@ -111,8 +111,6 @@ program
         config = options.config
           ? await loadConfigFile(options.config, detection.layout)
           : await collectConfig(projectName, options, detection);
-
-        await clearState(config.projectDir);
       }
 
       // Fail fast for the --config/--resume paths, which bypass collectConfig's
@@ -138,8 +136,6 @@ program
       config.withTower = config.withTower || !!options.withTower;
 
       await runPipeline(config, { completedTasks, dryRun: !!options.dryRun });
-
-      await clearState(config.projectDir);
 
       printSuccess(config.projectName);
     } catch (err) {

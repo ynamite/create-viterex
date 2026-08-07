@@ -64,17 +64,14 @@ export async function loadState(
   );
 }
 
-async function loadStateFromDir(
-  projectDir: string,
-  options: Record<string, unknown>,
-): Promise<StateData> {
+/**
+ * Read and migrate a state file's full contents. Returns null when the
+ * project dir has no state file. Shared by --resume (which also needs
+ * completedTasks) and the reuse-answers prompt (which only needs config).
+ */
+async function readStateData(projectDir: string): Promise<StateData | null> {
   const statePath = resolveStatePath(projectDir);
-
-  if (!(await pathExists(statePath))) {
-    throw new Error(
-      `No state file found at ${statePath}. Cannot resume — run without --resume to start fresh.`,
-    );
-  }
+  if (!(await pathExists(statePath))) return null;
 
   const raw = await readJSON<Record<string, unknown>>(statePath);
   const rawConfig = raw.config as Partial<ViterexConfig> & Record<string, unknown>;
@@ -101,6 +98,28 @@ async function loadStateFromDir(
   // because the npx cache hash, and therefore the on-disk path of the installed
   // package, can differ between the run that wrote the state and the resume run.
   await rederivePackageResolvedPaths(data.config);
+
+  return data;
+}
+
+/**
+ * Load only the saved config, for the reuse-answers prompt on re-runs of a
+ * completed (or failed) install. Null when no state file exists.
+ */
+export async function loadSavedConfig(projectDir: string): Promise<ViterexConfig | null> {
+  return (await readStateData(projectDir))?.config ?? null;
+}
+
+async function loadStateFromDir(
+  projectDir: string,
+  options: Record<string, unknown>,
+): Promise<StateData> {
+  const data = await readStateData(projectDir);
+  if (!data) {
+    throw new Error(
+      `No state file found at ${resolveStatePath(projectDir)}. Cannot resume — run without --resume to start fresh.`,
+    );
+  }
 
   if (options.skipDb) data.config.skipDb = true;
   if (options.skipAddons) data.config.skipAddons = true;
@@ -169,13 +188,4 @@ export async function saveState(
 
   const data = { config: persisted, completedTasks };
   await writeJSON(statePath, data);
-}
-
-/**
- * Delete the state file. Called on fresh runs (clear stale state) and after
- * successful completion.
- */
-export async function clearState(projectDir: string): Promise<void> {
-  const statePath = resolveStatePath(projectDir);
-  await fs.rm(statePath, { recursive: true, force: true });
 }

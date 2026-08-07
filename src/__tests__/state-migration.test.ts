@@ -2,7 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadState, saveState } from "../state.js";
+import { loadSavedConfig, loadState, saveState } from "../state.js";
 import type { ViterexConfig } from "../types.js";
 import { readJSON, writeJSON } from "../utils/fs.js";
 
@@ -193,5 +193,32 @@ describe("loadState — older state-file migration", () => {
     expect(result.config.templateReplacements.MASSIF_EMAIL).toBe(
       "info@acme.test",
     );
+  });
+});
+
+describe("loadSavedConfig — persistent state reuse", () => {
+  it("returns null when no state file exists", async () => {
+    expect(await loadSavedConfig(tmpDir)).toBeNull();
+  });
+
+  it("returns the saved config with backfilled defaults", async () => {
+    const stateFile = path.join(tmpDir, ".viterex-state.json");
+    await writeJSON(stateFile, {
+      config: {
+        projectName: "kept",
+        projectDir: tmpDir,
+        redaxoVersion: "5.20.2",
+        redaxoAdminUser: "admin",
+        redaxoAdminPassword: "x",
+        redaxoAdminEmail: "a@b.test",
+        // no layout/installMode — backfill must supply them
+      },
+      completedTasks: ["Download Redaxo"],
+    });
+
+    const config = await loadSavedConfig(tmpDir);
+    expect(config).not.toBeNull();
+    expect(config?.projectName).toBe("kept");
+    expect(config?.layout).toBe("modern"); // backfillConfigDefaults default
   });
 });
