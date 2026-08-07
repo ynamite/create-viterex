@@ -30,12 +30,15 @@ export async function initGitRepo(config: ViterexConfig): Promise<void> {
   } else {
     await fs.writeFile(gitignorePath, SAFETY_IGNORES.join("\n") + "\n");
   }
+
+  await ensureStateIgnored(projectDir);
 }
 
 /**
  * Make sure the persistent .viterex-state.json (it holds DB and admin
- * credentials) never enters the repo. Runs right before the initial
- * `git add .`; the merge is idempotent so re-runs add nothing.
+ * credentials) never enters the repo. Called from `initGitRepo`, which runs
+ * unconditionally (fresh repo or pre-existing one) before any commit step;
+ * the merge is idempotent so re-runs add nothing.
  */
 export async function ensureStateIgnored(projectDir: string): Promise<void> {
   const gitignorePath = path.join(projectDir, ".gitignore");
@@ -62,8 +65,6 @@ export async function gitInitialCommit(config: ViterexConfig): Promise<void> {
   } catch {
     // No HEAD yet; continue.
   }
-
-  await ensureStateIgnored(projectDir);
 
   await exec("git", ["add", "."], { cwd: projectDir, verbose });
 
