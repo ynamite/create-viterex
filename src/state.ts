@@ -74,6 +74,7 @@ async function readStateData(projectDir: string): Promise<StateData | null> {
   if (!(await pathExists(statePath))) return null;
 
   const raw = await readJSON<Record<string, unknown>>(statePath);
+  if (!raw?.config) return null;
   const rawConfig = raw.config as Partial<ViterexConfig> & Record<string, unknown>;
 
   // Migrate old massifSettings → templateReplacements

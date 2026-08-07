@@ -221,4 +221,10 @@ describe("loadSavedConfig — persistent state reuse", () => {
     expect(config?.projectName).toBe("kept");
     expect(config?.layout).toBe("modern"); // backfillConfigDefaults default
   });
+
+  it("returns null for a corrupt state file without a config key", async () => {
+    const stateFile = path.join(tmpDir, ".viterex-state.json");
+    await writeJSON(stateFile, { completedTasks: [] });
+    expect(await loadSavedConfig(tmpDir)).toBeNull();
+  });
 });

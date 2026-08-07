@@ -10,6 +10,7 @@ import { commandExists } from "./utils/exec.js";
 import { detectDefaultPm, PACKAGE_MANAGERS, type PackageManager } from "./utils/detect-pm.js";
 import { pathExists } from "./utils/fs.js";
 import { getLatestRedaxoVersion } from "./utils/redaxo-version.js";
+import { loadSavedConfig } from "./state.js";
 
 export async function collectConfig(
   projectNameArg: string | undefined,
@@ -49,6 +50,38 @@ export async function collectConfig(
     },
   });
   if (p.isCancel(projectName)) process.exit(0);
+
+  // ─── Reuse saved answers ──────────────────────────────────────────
+  // Any run leaves a persistent .viterex-state.json in the project dir.
+  // Offer to reuse its answers and re-run the full pipeline — this is a
+  // re-run, not a resume (--resume and --config never reach collectConfig).
+  const candidateDir =
+    isAugment || useCurrentDir
+      ? process.cwd()
+      : path.resolve(process.cwd(), projectName as string);
+  const saved = await loadSavedConfig(candidateDir);
+  if (saved) {
+    const reuse = await p.confirm({
+      message:
+        "Found saved answers from a previous run (.viterex-state.json) — reuse them and re-run the installation?",
+      initialValue: true,
+    });
+    if (p.isCancel(reuse)) process.exit(0);
+    if (reuse) {
+      if (
+        !PACKAGE_MANAGERS.includes(saved.packageManager) ||
+        !(await commandExists(saved.packageManager))
+      ) {
+        p.log.warn(
+          `Saved package manager '${saved.packageManager}' is unknown or not installed — continuing with prompts instead.`,
+        );
+      } else {
+        saved.projectDir = candidateDir; // survive a moved project dir
+        p.outro("Using saved answers — starting installation...");
+        return saved;
+      }
+    }
+  }
 
   // ─── Preset selection ─────────────────────────────────────────────
   // Loaded right after the project name so every prompt below can be skipped
