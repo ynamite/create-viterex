@@ -18,7 +18,7 @@ Three-layer design:
    - `install-addons.ts` — Loop: download → install → activate per addon via Redaxo CLI
    - `scaffold-frontend.ts` — Copy template files and generate .env
    - `install-deps.ts` — composer install + bun/pnpm/yarn/npm install
-   - `init-git.ts` — `initGitRepo` (git init, early — `git submodule add` needs `.git`) + `gitInitialCommit` (the **last** file-touching task, so the user ends on a clean `git status`). Build + browserslist refresh run before the commit; push/browser/next-steps run after it and touch no tracked files.
+   - `init-git.ts` — `initGitRepo` (git init, early — `git submodule add` needs `.git`) + `gitInitialCommit` (the **last** file-touching task, so the user ends on a clean `git status`). Build + browserslist refresh run before the commit; push/browser/next-steps run after it and touch no tracked files. `initGitRepo` also merges `.viterex-state.json` into the project `.gitignore` (unconditionally, so augment installs are covered too) — the state file persists across runs (it powers the reuse-answers prompt) and must never be committed.
 
 ## Tech stack
 
