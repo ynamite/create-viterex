@@ -68,7 +68,7 @@ Releases are tag-triggered: push a `v*` tag and `.github/workflows/release.yml` 
 - `--skip-db` — skip database creation
 - `--skip-addons` — skip addon installation
 - `--skip-git` — don't init git repo
-- `--pm <yarn|npm|pnpm>` — package manager (default: pnpm)
+- `--pm <bun|pnpm|yarn|npm>` — package manager (default: bun if installed, else pnpm)
 - `--config <path>` — load config from JSON file, skip all prompts
 
 ## Templates
