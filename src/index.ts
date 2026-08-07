@@ -10,6 +10,8 @@ import { detectInstallation } from "./utils/detect.js";
 import { pathExists, writeJSON } from "./utils/fs.js";
 import { loadConfigFile } from "./utils/load-config.js";
 import { printBanner, printSuccess, printError } from "./utils/log.js";
+import { PACKAGE_MANAGERS } from "./utils/detect-pm.js";
+import { commandExists } from "./utils/exec.js";
 import type { ViterexConfig } from "./types.js";
 
 const pkgVersion = (() => {
@@ -111,6 +113,24 @@ program
           : await collectConfig(projectName, options, detection);
 
         await clearState(config.projectDir);
+      }
+
+      // Fail fast for the --config/--resume paths, which bypass collectConfig's
+      // interactive PM prompt (and its own validation) entirely — a stale state
+      // file or a hand-edited config could carry an unknown or no-longer-installed
+      // package manager that would otherwise die mid-pipeline in install-deps.
+      if (options.resume || options.config) {
+        const source = options.resume ? "state file" : "config file";
+        if (!PACKAGE_MANAGERS.includes(config.packageManager)) {
+          throw new Error(
+            `Unknown package manager '${config.packageManager}' in ${source} — use one of: ${PACKAGE_MANAGERS.join(", ")}.`,
+          );
+        }
+        if (!(await commandExists(config.packageManager))) {
+          throw new Error(
+            `Package manager '${config.packageManager}' from ${source} is not installed (not found on PATH).`,
+          );
+        }
       }
 
       config.verbose = !!options.verbose;

@@ -34,7 +34,7 @@ export async function installDependencies(config: ViterexConfig): Promise<void> 
     verbose,
   });
 
-  const { stdout } = await exec(packageManager, ["--version"], { cwd: projectDir });
+  const { stdout } = await exec(packageManager, ["--version"]);
   await stampPackageManagerField(projectDir, `${packageManager}@${String(stdout).trim()}`);
 
   // Run JS package manager install
@@ -44,18 +44,15 @@ export async function installDependencies(config: ViterexConfig): Promise<void> 
   });
 
   // Upgrade dependencies — these commands are interactive and need a TTY
-  const upgradeCmd: Record<string, string[]> = {
+  const upgradeCmd: Record<ViterexConfig["packageManager"], string[]> = {
     yarn: ["upgrade-interactive"],
     npm: ["outdated"], // npm has no built-in interactive upgrade
     pnpm: ["update", "--interactive", "--latest"],
     bun: ["update", "--interactive", "--latest"],
   };
 
-  const args = upgradeCmd[packageManager];
-  if (args) {
-    await exec(packageManager, args, {
-      cwd: projectDir,
-      stdio: "inherit",
-    });
-  }
+  await exec(packageManager, upgradeCmd[packageManager], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 }

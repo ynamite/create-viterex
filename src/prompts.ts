@@ -151,7 +151,7 @@ export async function collectConfig(
       message: "Package manager",
       initialValue: await detectDefaultPm(),
       options: [
-        { value: "bun",  label: "bun",  hint: hint("bun", "fastest — default when installed") },
+        { value: "bun",  label: "bun",  hint: hint("bun", "fastest") },
         { value: "pnpm", label: "pnpm", hint: hint("pnpm", "fast, strict, content-addressable store") },
         { value: "yarn", label: "Yarn", hint: hint("yarn", "Yarn 1.x — wide ecosystem compatibility") },
         { value: "npm",  label: "npm",  hint: hint("npm", "bundled with Node — slowest install") },
