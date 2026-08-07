@@ -14,8 +14,18 @@ import type { ViterexConfig } from "../types.js";
 export async function buildFrontend(config: ViterexConfig): Promise<void> {
   const { projectDir, packageManager, verbose } = config;
 
+  // Refresh browserslist via the chosen PM's package runner. yarn 1.x has no
+  // dlx equivalent, so it uses npx — Node is always present (the installer
+  // itself runs on it).
+  const dlx: Record<ViterexConfig["packageManager"], [string, string[]]> = {
+    bun: ["bunx", ["update-browserslist-db@latest"]],
+    pnpm: ["pnpm", ["dlx", "update-browserslist-db@latest"]],
+    yarn: ["npx", ["update-browserslist-db@latest"]],
+    npm: ["npx", ["update-browserslist-db@latest"]],
+  };
   try {
-    await exec("npx", ["update-browserslist-db@latest"], { cwd: projectDir, verbose });
+    const [cmd, args] = dlx[packageManager];
+    await exec(cmd, args, { cwd: projectDir, verbose });
   } catch (err) {
     p.log.warn(
       `Could not refresh browserslist DB — continuing. (${(err as Error).message})`,
