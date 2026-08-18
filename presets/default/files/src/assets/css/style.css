@@ -1,15 +1,21 @@
-@import "tailwindcss";
+/* source(none): scan ONLY the @source globs below — the default whole-project
+   heuristic also tokenizes docs/markdown prose into bogus class candidates.
+   Paths are relative to this stylesheet (src/assets/css/). */
+@import "tailwindcss" source(none);
 
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 @plugin "@iconify/tailwind4";
 @plugin "tailwind-clamp";
 
-@source "/src/templates/**/*.php";
-@source "/src/modules/**/*.php";
-@source "/src/addons/project/lib/**/*.php";
-@source "/src/addons/project/fragments/**/*.php";
-@source not "/src/addons/**/vendor/**/*";
+@source "../../templates/**/*.php";
+@source "../../modules/**/*.php";
+/* enable once the project grows a fragments dir:
+@source "../../fragments/**/*.php"; */
+@source "../js/**/*.js";
+@source "../../addons/project/lib/**/*.php";
+@source "../../addons/project/fragments/**/*.php";
+@source not "../../addons/**/vendor/**/*";
 
 @theme {
 	--color-bg: #070712;
