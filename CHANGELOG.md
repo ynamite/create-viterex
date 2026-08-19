@@ -8,6 +8,17 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.2.1] - 2026-08-19
+
+### Fixed
+
+- Default preset: the scaffolded `@source "/src/…"` globs resolved as absolute
+  filesystem paths and matched nothing — Tailwind's default whole-project scan
+  carried projects implicitly and tokenized docs/markdown prose into bogus
+  class candidates (spurious `tailwind-clamp` build warnings). The template now
+  uses `@import "tailwindcss" source(none)` with stylesheet-relative globs
+  (incl. `src/assets/js`), making scanning explicit-only and deterministic.
+
 ## [3.2.0] - 2026-08-07
 
 ### Added
