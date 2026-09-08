@@ -1,6 +1,7 @@
 import path from "node:path";
+import fs from "node:fs/promises";
 import { exec } from "../utils/exec.js";
-import { consolePathFor, isSetupComplete } from "../utils/detect.js";
+import { cacheDirFor, consolePathFor, isSetupComplete } from "../utils/detect.js";
 import type { ViterexConfig } from "../types.js";
 
 /**
@@ -73,6 +74,14 @@ export async function installRedaxo(config: ViterexConfig): Promise<void> {
       await exec("mysql", [...authArgs, "-e", `DROP DATABASE \`${dbName}\`;`], { verbose });
     }
   }
+
+  // Redaxo caches rex_config (incl. which addons are installed) in
+  // <cache>/core/config.cache. A stale cache from a previous attempt makes
+  // setup:run skip the system addons, leaving core tables (rex_user_role,
+  // rex_media, ...) missing. Always start setup:run from an empty cache.
+  const cacheDir = path.join(projectDir, cacheDirFor(layout));
+  await fs.rm(cacheDir, { recursive: true, force: true });
+  await fs.mkdir(cacheDir, { recursive: true });
 
   const serverUrl = `http://${redaxoServerName}/`;
 

@@ -27,16 +27,34 @@ export function srcAddonsDirFor(layout: Layout): string {
   return layout === "modern" ? "src/addons" : "redaxo/src/addons";
 }
 
+/** Parse a `--layout` flag value (m | c | ct | full names). */
+export function normalizeLayout(value: string): Layout {
+  const v = value.toLowerCase().replace(/\s+/g, "");
+  if (v === "m" || v === "modern") return "modern";
+  if (v === "c" || v === "classic") return "classic";
+  if (v === "ct" || v === "classic+theme" || v === "classictheme" || v === "theme") {
+    return "classic+theme";
+  }
+  throw new Error(`Unknown --layout value: "${value}". Expected modern | classic | classic+theme.`);
+}
+
+export function cacheDirFor(layout: Layout): string {
+  return layout === "modern" ? "var/cache" : "redaxo/cache";
+}
+
 /**
  * Reads `<dataDir>/core/config.yml` to detect a completed Redaxo setup.
- * Returns true when `setup: true` is found in the file. Falsy on any
- * failure (file missing, parse error) — caller treats that as "not set up".
+ *
+ * A fresh download ships no config.yml (core/default.config.yml carries
+ * `setup: true`, i.e. "setup mode active"). `setup:run` writes config.yml
+ * with `setup: false` on success. So: file present and NOT `setup: true`
+ * means the install is complete.
  */
 export async function isSetupComplete(targetDir: string, layout: Layout): Promise<boolean> {
   const configPath = path.join(targetDir, dataDirFor(layout), "core", "config.yml");
   if (!(await pathExists(configPath))) return false;
   const content = await fs.readFile(configPath, "utf-8");
-  return /^setup:\s*true\s*$/m.test(content);
+  return !/^setup:\s*true\s*$/m.test(content);
 }
 
 /**

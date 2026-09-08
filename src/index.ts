@@ -79,7 +79,12 @@ program
         const detection = await detectInstallation(process.cwd());
         detection.mode = "fresh";
 
-        const generated = await collectConfig(projectName, options, detection);
+        const generated = await collectConfig(
+          projectName,
+          options,
+          detection,
+          resolveTargetDir(projectName, undefined),
+        );
         // Strip runtime-only fields the user shouldn't pin in a config file.
         const { verbose: _v, forcePush: _fp, withTower: _wt, ...persisted } = generated;
         await writeJSON(targetPath, persisted);
@@ -110,7 +115,7 @@ program
       } else {
         config = options.config
           ? await loadConfigFile(options.config, detection.layout)
-          : await collectConfig(projectName, options, detection);
+          : await collectConfig(projectName, options, detection, targetDir);
       }
 
       // Fail fast for the --config/--resume paths, which bypass collectConfig's

@@ -4,6 +4,7 @@ import * as p from "@clack/prompts";
 import type { ViterexConfig } from "./types.js";
 import { loadPreset, resolveSeedFile } from "./preset.js";
 import { pathExists, readJSON, writeJSON } from "./utils/fs.js";
+import { normalizeLayout } from "./utils/detect.js";
 import { backfillConfigDefaults } from "./utils/load-config.js";
 
 const STATE_FILE = ".viterex-state.json";
@@ -106,6 +107,29 @@ async function readStateData(projectDir: string): Promise<StateData | null> {
   await rederivePackageResolvedPaths(data.config);
 
   return data;
+}
+
+/**
+ * Reuse-answers gate: every setup-shaping flag passed on this invocation
+ * must either be absent or agree with the saved value. A re-run with the
+ * exact same command line (e.g. `--preset ./my-preset`) therefore still
+ * gets the offer; a changed flag means "prompt me fresh".
+ */
+export function savedConfigMatchesFlags(
+  saved: ViterexConfig,
+  options: { pm?: string; layout?: string; lang?: string; timezone?: string; preset?: string },
+): boolean {
+  const same = (flag: string | undefined, value: string | undefined) =>
+    flag === undefined || flag === value;
+  const samePath = (flag: string | undefined, value: string | undefined) =>
+    same(flag, value) || (!!flag && !!value && path.resolve(flag) === path.resolve(value));
+  return (
+    same(options.pm, saved.packageManager) &&
+    same(options.layout && normalizeLayout(options.layout), saved.layout) &&
+    same(options.lang, saved.redaxoLang) &&
+    same(options.timezone, saved.redaxoTimezone) &&
+    samePath(options.preset, saved.preset)
+  );
 }
 
 /**

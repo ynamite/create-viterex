@@ -5,17 +5,19 @@ import { ADDON_CATALOG, ALWAYS_INCLUDED, type CliOptions, type Layout, type Vite
 import { discoverPresets, loadPreset, resolveSeedFile } from "./preset.js";
 import { resolvePresetValues } from "./utils/resolve-preset-values.js";
 import { promptAugmentAddons } from "./tasks/augment-prompt.js";
-import { dataDirFor, type DetectionResult } from "./utils/detect.js";
+import { dataDirFor, normalizeLayout, type DetectionResult } from "./utils/detect.js";
 import { commandExists } from "./utils/exec.js";
 import { detectDefaultPm, PACKAGE_MANAGERS, type PackageManager } from "./utils/detect-pm.js";
 import { pathExists } from "./utils/fs.js";
 import { getLatestRedaxoVersion } from "./utils/redaxo-version.js";
-import { loadSavedConfig } from "./state.js";
+import { loadSavedConfig, savedConfigMatchesFlags } from "./state.js";
 
 export async function collectConfig(
   projectNameArg: string | undefined,
   options: CliOptions,
   detection: DetectionResult,
+  /** Resolved install directory (see resolveTargetDir in index.ts). */
+  targetDir: string,
 ): Promise<ViterexConfig> {
   const isAugment = detection.mode === "augment";
 
@@ -32,9 +34,8 @@ export async function collectConfig(
   // project name (and vhost) defaults to slugified basename(cwd).
   const useCurrentDir = projectNameArg === "." || projectNameArg === "./";
   const cwdName = slugifyProjectName(path.basename(process.cwd()));
-  const projectDirForRead = isAugment || useCurrentDir ? process.cwd() : "";
   const augmentExistingValues = isAugment
-    ? await readExistingRedaxoConfig(projectDirForRead, detection.layout)
+    ? await readExistingRedaxoConfig(targetDir, detection.layout)
     : null;
 
   const projectNameDefault =
@@ -55,24 +56,16 @@ export async function collectConfig(
   // Any run leaves a persistent .viterex-state.json in the project dir.
   // Offer to reuse its answers and re-run the full pipeline — this is a
   // re-run, not a resume (--resume and --config never reach collectConfig).
-  const candidateDir =
-    isAugment || useCurrentDir
-      ? process.cwd()
-      : path.resolve(process.cwd(), projectName as string);
-  // Only offer reuse when the user hasn't signaled they want different
-  // answers this time: explicit setup-shaping flags mean "prompt me fresh",
-  // and --generate-config's own copy ("re-run the installation") would lie
-  // since generating a config never installs anything.
-  const wantsFreshPrompts =
-    !options.generateConfig &&
-    !options.fresh &&
-    options.pm === undefined &&
-    options.layout === undefined &&
-    options.lang === undefined &&
-    options.timezone === undefined &&
-    options.preset === undefined;
-  const saved = wantsFreshPrompts ? await loadSavedConfig(candidateDir) : null;
-  if (saved) {
+  // With a project-name argument (or an existing install) the target dir is
+  // fixed; without one the typed project name decides.
+  const projectDir =
+    projectNameArg || isAugment ? targetDir : path.resolve(process.cwd(), projectName as string);
+  // Skip the offer when the user signaled they want different answers this
+  // time: --fresh, a setup-shaping flag that disagrees with the saved value,
+  // or --generate-config (whose copy "re-run the installation" would lie).
+  const saved =
+    !options.generateConfig && !options.fresh ? await loadSavedConfig(projectDir) : null;
+  if (saved && savedConfigMatchesFlags(saved, options)) {
     const reuse = await p.confirm({
       message:
         "Found saved answers from a previous run (.viterex-state.json) — reuse them and re-run the installation?",
@@ -88,7 +81,7 @@ export async function collectConfig(
           `Saved package manager '${saved.packageManager}' is unknown or not installed — continuing with prompts instead.`,
         );
       } else {
-        saved.projectDir = candidateDir; // survive a moved project dir
+        saved.projectDir = projectDir; // survive a moved project dir
         // Mirror --resume's skip-flag handling so an accepted reuse still
         // honours flags passed on this invocation.
         if (options.skipDb) saved.skipDb = true;
@@ -579,10 +572,7 @@ export async function collectConfig(
 
   return {
     projectName: projectName as string,
-    projectDir:
-      isAugment || useCurrentDir
-        ? process.cwd()
-        : path.resolve(process.cwd(), projectName as string),
+    projectDir,
     layout,
     installMode: isAugment ? "augment" : "fresh",
     redaxoVersion,
@@ -639,15 +629,6 @@ function slugifyProjectName(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function normalizeLayout(value: string): Layout {
-  const v = value.toLowerCase().replace(/\s+/g, "");
-  if (v === "m" || v === "modern") return "modern";
-  if (v === "c" || v === "classic") return "classic";
-  if (v === "ct" || v === "classic+theme" || v === "classictheme" || v === "theme") {
-    return "classic+theme";
-  }
-  throw new Error(`Unknown --layout value: "${value}". Expected modern | classic | classic+theme.`);
-}
 
 interface ExistingRedaxoSnapshot {
   projectName?: string;

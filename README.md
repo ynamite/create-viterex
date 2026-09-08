@@ -81,7 +81,7 @@ create-viterex [project-name] [options]
 
 ### `--resume`
 
-If a task fails mid-run, fix the issue and resume. State is tracked in `.viterex-state.json` inside the project directory. The state file is kept after a successful run and excluded from the repo via `.gitignore` — unless you pass `--skip-git` — (it contains your DB and admin passwords). Re-running `npx create-viterex <project-name>` on an existing project detects it and offers to reuse the saved answers for a full re-run — no re-entering setup values.
+If a task fails mid-run, fix the issue and resume. State is tracked in `.viterex-state.json` inside the project directory. The state file is kept after a successful run and excluded from the repo via `.gitignore` — unless you pass `--skip-git` — (it contains your DB and admin passwords). Re-running `npx create-viterex <project-name>` on an existing project detects it and offers to reuse the saved answers for a full re-run — no re-entering setup values. Flags like `--preset` or `--layout` don't block the offer as long as they match the saved values; `--fresh` or a differing flag prompts from scratch.
 
 ```bash
 npx create-viterex my-site --resume

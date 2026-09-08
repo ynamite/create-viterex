@@ -1,4 +1,5 @@
 import path from "node:path";
+import * as p from "@clack/prompts";
 import { pathExists } from "../utils/fs.js";
 import { exec } from "../utils/exec.js";
 import { consolePathFor, srcAddonsDirFor } from "../utils/detect.js";
@@ -16,6 +17,10 @@ export async function installAddons(config: ViterexConfig): Promise<void> {
   // thrown error message when a task fails, which gives the user something to
   // act on.
 
+  // A failed download (redaxo.org hiccup, broken package entry) shouldn't
+  // abort the whole loop — skip that addon, keep going, report at the end.
+  const failedDownloads: string[] = [];
+
   for (const addon of addons) {
     const isPlugin = addon.key.includes("/");
 
@@ -29,7 +34,12 @@ export async function installAddons(config: ViterexConfig): Promise<void> {
           ...(addon.version ? [addon.version] : []),
           "--no-interaction",
         ];
-        await runWithContext("install:download", addon.key, "php", downloadArgs, projectDir, verbose);
+        try {
+          await runWithContext("install:download", addon.key, "php", downloadArgs, projectDir, verbose);
+        } catch (err) {
+          failedDownloads.push(`${addon.key}: ${(err as Error).message.replace(/\s+/g, " ").trim()}`);
+          continue;
+        }
       }
     }
 
@@ -80,6 +90,13 @@ export async function installAddons(config: ViterexConfig): Promise<void> {
 
   await exec("php", [consolePath, "cache:clear"], { cwd: projectDir, verbose });
   await exec("php", [consolePath, "be_style:compile"], { cwd: projectDir, verbose });
+
+  if (failedDownloads.length > 0) {
+    p.log.warn(
+      `Could not download ${failedDownloads.length} addon(s) — install them manually via the Redaxo installer:\n` +
+        failedDownloads.map((f) => `  • ${f}`).join("\n"),
+    );
+  }
 }
 
 /**

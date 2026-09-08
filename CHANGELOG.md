@@ -8,6 +8,13 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Re-running on a completed install no longer drops and half-rebuilds the database.** `isSetupComplete` checked for `setup: true` in `config.yml`, which in Redaxo means "setup mode active" — a finished `setup:run` writes `setup: false`, so the guard never fired. A re-run backed up and dropped the DB, then re-ran `setup:run`, which skipped the system addons because the stale `var/cache/core/config.cache` still listed them as installed, leaving `rex_user_role`, `rex_media`, … missing (yform then failed with `Table 'rex_user_role' doesn't exist`). The check is inverted, and the retry path now clears the Redaxo cache dir before `setup:run`.
+- **The saved-answers offer now works with the same command line that created the project.** Passing `--preset` (or `--layout`, `--pm`, `--lang`, `--timezone`) suppressed the offer entirely; now a flag only suppresses it when it disagrees with the saved value.
+- **`create-viterex <existing-dir>` from a parent folder targeted the wrong directory.** In augment mode `projectDir` was `process.cwd()` instead of the named directory, so the state file wasn't found and the install would have landed in the parent folder.
+- **A failed `install:download` no longer aborts the whole addon loop.** The addon is skipped (install/activate/plugins included), the remaining addons are installed, and the failures are listed in a warning at the end of the task. Background: redaxo.org lists some addons twice under the same version with a dead download path (e.g. navbuilder 1.0.6), which makes `install:download` fail with a checksum error every time.
+
 ## [3.2.1] - 2026-08-19
 
 ### Fixed
