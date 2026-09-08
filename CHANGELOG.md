@@ -8,6 +8,8 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-09-08
+
 ### Added
 
 - `submoduleAddons[].branch` — track a branch instead of the remote HEAD (`git submodule add -b <branch>`), e.g. to install an addon from an open PR's head branch.

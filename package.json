@@ -1,6 +1,6 @@
 {
   "name": "create-viterex",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "description": "CLI to scaffold a ViteRex (Redaxo + Vite) project",
   "type": "module",
   "author": "ynamite <ynamite@gmail.com>",
