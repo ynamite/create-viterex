@@ -146,7 +146,10 @@ The config file's `projectDir` field provides the resume target when no position
 
   // Submodule addons (preset extras only — viterex_addon is no longer a submodule)
   "submoduleAddons": [
-    { "url": "git@github.com:org/redaxo_massif.git", "path": "src/addons/massif", "packageKey": "massif" }
+    { "url": "git@github.com:org/redaxo_massif.git", "path": "src/addons/massif", "packageKey": "massif" },
+    // optional: "branch" tracks a branch instead of the default HEAD (e.g. an open PR's head branch),
+    //           "hasComposerDeps" runs composer install inside the submodule
+    { "url": "git@github.com:FriendsOfREDAXO/navbuilder.git", "path": "src/addons/navbuilder", "packageKey": "navbuilder", "branch": "v2" }
   ],
 
   // Preset extension (optional — typically set by a preset, not by hand)

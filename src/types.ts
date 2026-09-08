@@ -166,6 +166,8 @@ export interface SubmoduleAddon {
   url: string;
   path: string;
   packageKey: string;
+  /** Branch to track (`git submodule add -b`). Defaults to the remote HEAD. */
+  branch?: string;
   hasComposerDeps?: boolean;
 }
 

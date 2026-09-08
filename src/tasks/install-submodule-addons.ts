@@ -25,7 +25,11 @@ export async function addSubmoduleAddons(config: ViterexConfig): Promise<void> {
     if (alreadyDeclared) {
       await exec("git", ["submodule", "update", "--init", addon.path], { cwd: projectDir, verbose });
     } else {
-      await exec("git", ["submodule", "add", addon.url, addon.path], { cwd: projectDir, verbose });
+      await exec(
+        "git",
+        ["submodule", "add", ...(addon.branch ? ["-b", addon.branch] : []), addon.url, addon.path],
+        { cwd: projectDir, verbose },
+      );
     }
   }
 
