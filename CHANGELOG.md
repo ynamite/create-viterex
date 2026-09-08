@@ -12,6 +12,10 @@ lives under `[Unreleased]`.
 
 - `submoduleAddons[].branch` — track a branch instead of the remote HEAD (`git submodule add -b <branch>`), e.g. to install an addon from an open PR's head branch.
 
+### Changed
+
+- Preset custom prompts (`templateReplacements`) are pre-filled with the answers saved in `.viterex-state.json`, even when the reuse offer is declined.
+
 ### Fixed
 
 - **Re-running on a completed install no longer drops and half-rebuilds the database.** `isSetupComplete` checked for `setup: true` in `config.yml`, which in Redaxo means "setup mode active" — a finished `setup:run` writes `setup: false`, so the guard never fired. A re-run backed up and dropped the DB, then re-ran `setup:run`, which skipped the system addons because the stale `var/cache/core/config.cache` still listed them as installed, leaving `rex_user_role`, `rex_media`, … missing (yform then failed with `Table 'rex_user_role' doesn't exist`). The check is inverted, and the retry path now clears the Redaxo cache dir before `setup:run`.

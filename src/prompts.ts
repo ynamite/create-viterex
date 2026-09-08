@@ -440,12 +440,14 @@ export async function collectConfig(
   }
 
   // ─── Custom prompts (from preset) ─────────────────────────────────
+  // Previous answers from .viterex-state.json pre-fill the prompts even when
+  // the reuse offer was declined, so a re-run only needs edits, not retyping.
   if (loaded?.config.customPrompts?.length) {
     for (const prompt of loaded.config.customPrompts) {
       const value = await p.text({
         message: prompt.message,
         placeholder: prompt.placeholder,
-        initialValue: prompt.initialValue,
+        initialValue: saved?.templateReplacements?.[prompt.key] ?? prompt.initialValue,
         validate: prompt.required ? (v) => (!v ? "This field is required" : undefined) : undefined,
       });
       if (p.isCancel(value)) process.exit(0);
