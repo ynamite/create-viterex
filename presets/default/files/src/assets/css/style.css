@@ -10,8 +10,9 @@
 
 @source "../../templates/**/*.php";
 @source "../../modules/**/*.php";
-/* enable once the project grows a fragments dir:
-@source "../../fragments/**/*.php"; */
+/* Once the project grows a fragments dir, add:
+   @source "../../fragments";  (directories are scanned recursively;
+   a glob can't live inside this comment because its "**" would close it) */
 @source "../js/**/*.js";
 @source "../../addons/project/lib/**/*.php";
 @source "../../addons/project/fragments/**/*.php";
