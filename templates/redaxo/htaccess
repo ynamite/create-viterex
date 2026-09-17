@@ -20,13 +20,13 @@ AddDefaultCharset utf-8
     RewriteBase /
 
     # Force HTTPS
-    RewriteCond %{HTTPS} !=on
-    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
-    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+    # RewriteCond %{HTTPS} !=on
+    # RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
     # Strip www.
-    RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-    RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+    # RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+    # RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
 
     # Block dotfiles, allow /.well-known/
     RewriteCond %{REQUEST_URI} !(^|/)\.well-known/
