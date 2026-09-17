@@ -8,6 +8,12 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.3.1] - 2026-09-17
+
+### Fixed
+
+- **The scaffolded `.htaccess` no longer forces HTTPS or strips `www.` out of the box.** Active by default, the rules broke plain-http hosts (local dev, reverse proxies that don't send `X-Forwarded-Proto`). They now ship commented out — uncomment them once the production host serves HTTPS.
+
 ## [3.3.0] - 2026-09-08
 
 ### Added
