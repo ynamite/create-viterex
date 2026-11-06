@@ -8,6 +8,12 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+## [3.3.2] - 2026-11-06
+
+### Removed
+
+- **Obsolete `LocalValetDriver.php` template.** New projects no longer get a Valet driver.
+
 ### Fixed
 
 - **Node requirement matches the scaffolded toolchain:** `^22.12.0 || >=24.0.0` in `engines` and the README (was `>=22` / "Node.js >= 18"), as Vite 8 and `vite-plugin-static-copy` 4.1 need.

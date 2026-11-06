@@ -75,7 +75,7 @@ Releases are tag-triggered: push a `v*` tag and `.github/workflows/release.yml` 
 
 The `templates/` directory contains `.tpl` files that get copied/transformed into the project. Uses `{{PLACEHOLDER}}` token replacement. Needs to be populated with:
 
-- `base/` — static files copied as-is (LocalValetDriver.php, etc.)
+- `base/` — static files copied as-is
 
 ## Redaxo-specific notes
 
