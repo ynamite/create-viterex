@@ -325,7 +325,7 @@ Baseline addons are installed regardless of preset choice (see Always-included b
 
 ## Prerequisites
 
-- Node.js >= 18
+- Node.js `^22.12.0 || >=24.0.0` (required by the scaffolded Vite 8 toolchain)
 - PHP (for Redaxo CLI commands)
 - MySQL / MariaDB (unless `--skip-db` and you have an empty DB ready)
 - Composer

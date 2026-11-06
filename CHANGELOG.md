@@ -8,6 +8,10 @@ lives under `[Unreleased]`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Node requirement matches the scaffolded toolchain:** `^22.12.0 || >=24.0.0` in `engines` and the README (was `>=22` / "Node.js >= 18"), as Vite 8 and `vite-plugin-static-copy` 4.1 need.
+
 ## [3.3.1] - 2026-09-17
 
 ### Fixed
